@@ -105,3 +105,8 @@
 ## Bugs
 - [x] Fix: After signing in, user is redirected back to Home screen instead of the dashboard
 - [x] Fix: Sign-in flow completely broken - user cannot authenticate at all
+- [x] Remove OAuth sign-in and replace with simple password protection
+- [x] Create password login page
+- [x] Add server-side password verification endpoint
+- [x] Protect all dashboard routes behind password check
+- [x] Allow user to set the site password via secrets/env

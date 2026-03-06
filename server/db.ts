@@ -276,4 +276,24 @@ export async function getCustomerQuoteLineItems(customerQuoteId: number) {
   return db.select().from(customerQuoteLineItems).where(eq(customerQuoteLineItems.customerQuoteId, customerQuoteId));
 }
 
+/**
+ * Update the saved margin percentage on a supplier line item
+ */
+export async function updateLineItemMargin(id: number, marginPercent: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(lineItems).set({ markupPercent: marginPercent }).where(eq(lineItems.id, id));
+}
+
+/**
+ * Bulk update margins for multiple line items at once
+ */
+export async function updateLineItemMargins(items: Array<{ id: number; marginPercent: number }>) {
+  const db = await getDb();
+  if (!db) return;
+  for (const item of items) {
+    await db.update(lineItems).set({ markupPercent: item.marginPercent }).where(eq(lineItems.id, item.id));
+  }
+}
+
 // TODO: add additional feature queries as needed

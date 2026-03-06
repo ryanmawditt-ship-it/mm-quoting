@@ -667,11 +667,18 @@ function QuoteBuilder({
 }) {
   const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number }>>(new Map());
   const [globalMargin, setGlobalMargin] = useState<number>(20);
-  const [marginMode, setMarginMode] = useState<"global" | "per-supplier" | "per-item">("global");
   const [salespersonId, setSalespersonId] = useState<string>("");
   const [jobTitle, setJobTitle] = useState(project.name || "");
   const [validDays, setValidDays] = useState(28);
   const [generating, setGenerating] = useState(false);
+
+  // Margin persistence mutations
+  const updateMarginMutation = trpc.lineItems.updateMargin.useMutation();
+  const updateMarginsMutation = trpc.lineItems.updateMargins.useMutation();
+  const utils = trpc.useUtils();
+
+  // Debounce timer ref for saving margins
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Collect all line items from all supplier quotes
   const allLineItemQueries = supplierQuotes.map((sq) =>
@@ -692,19 +699,39 @@ function QuoteBuilder({
     return items;
   }, [allLineItemQueries.map((q) => q.data), supplierQuotes, suppliers]);
 
+  // Helper to get the saved/default margin for a line item
+  const getItemMargin = useCallback((item: any, supplier: any) => {
+    // Priority: 1) saved margin on the line item, 2) supplier default, 3) fallback 20
+    if (item.markupPercent !== null && item.markupPercent !== undefined) {
+      return item.markupPercent;
+    }
+    return supplier?.defaultMarkupPercent || 20;
+  }, []);
+
+  // Save a single line item's margin to the database (debounced)
+  const saveMarginToDb = useCallback((itemId: number, margin: number) => {
+    updateMarginMutation.mutate(
+      { id: itemId, marginPercent: Math.min(99, Math.max(0, margin)) },
+      {
+        onSuccess: () => {
+          // Silently refresh the line items data
+          supplierQuotes.forEach((sq) => {
+            utils.lineItems.getBySupplierQuote.invalidate({ supplierQuoteId: sq.id });
+          });
+        },
+      }
+    );
+  }, [updateMarginMutation, utils, supplierQuotes]);
+
   const toggleItem = (itemId: number, item: any, supplier: any) => {
     const newSelected = new Map(selectedItems);
     if (newSelected.has(itemId)) {
       newSelected.delete(itemId);
     } else {
-      const defaultMargin =
-        marginMode === "global"
-          ? globalMargin
-          : marginMode === "per-supplier"
-          ? supplier?.defaultMarkupPercent || 20
-          : supplier?.defaultMarkupPercent || 20;
+      // Use saved margin from DB, or supplier default, or global
+      const savedMargin = getItemMargin(item, supplier);
       newSelected.set(itemId, {
-        margin: defaultMargin,
+        margin: savedMargin,
         quantity: item.quantity,
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
@@ -716,12 +743,9 @@ function QuoteBuilder({
   const selectAll = () => {
     const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number }>();
     allLineItems.forEach(({ item, supplier }) => {
-      const defaultMargin =
-        marginMode === "global"
-          ? globalMargin
-          : supplier?.defaultMarkupPercent || 20;
+      const savedMargin = getItemMargin(item, supplier);
       newSelected.set(item.id, {
-        margin: defaultMargin,
+        margin: savedMargin,
         quantity: item.quantity,
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
@@ -734,22 +758,50 @@ function QuoteBuilder({
     setSelectedItems(new Map());
   };
 
+  // Update margin for a single item — saves to local state AND persists to DB
   const updateItemMargin = (itemId: number, margin: number) => {
+    const clampedMargin = Math.min(99, Math.max(0, margin));
     const newSelected = new Map(selectedItems);
     const existing = newSelected.get(itemId);
     if (existing) {
-      newSelected.set(itemId, { ...existing, margin });
+      newSelected.set(itemId, { ...existing, margin: clampedMargin });
     }
     setSelectedItems(newSelected);
+
+    // Debounce the DB save (300ms)
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveMarginToDb(itemId, clampedMargin);
+    }, 300);
   };
 
-  // Apply global margin to all selected items
+  // Apply global margin to all items (selected or not) and save to DB
   const applyGlobalMargin = () => {
+    // Update all selected items
     const newSelected = new Map(selectedItems);
     newSelected.forEach((val, key) => {
       newSelected.set(key, { ...val, margin: globalMargin });
     });
     setSelectedItems(newSelected);
+
+    // Save all line items' margins to DB
+    const allItemIds = allLineItems.map(({ item }) => ({
+      id: item.id,
+      marginPercent: globalMargin,
+    }));
+    if (allItemIds.length > 0) {
+      updateMarginsMutation.mutate(
+        { items: allItemIds },
+        {
+          onSuccess: () => {
+            toast.success(`Applied ${globalMargin}% margin to all ${allItemIds.length} items`);
+            supplierQuotes.forEach((sq) => {
+              utils.lineItems.getBySupplierQuote.invalidate({ supplierQuoteId: sq.id });
+            });
+          },
+        }
+      );
+    }
   };
 
   // Calculate totals using margin formula: Sell = Cost / (1 - margin/100)
@@ -790,7 +842,7 @@ function QuoteBuilder({
           salespersonId: salespersonId ? parseInt(salespersonId) : undefined,
           jobTitle,
           validDays,
-          globalMarginPercent: marginMode === "global" ? globalMargin : undefined,
+          globalMarginPercent: globalMargin,
         }),
       });
 
@@ -848,40 +900,31 @@ function QuoteBuilder({
           />
         </div>
         <div className="space-y-2">
-          <Label>Margin Mode</Label>
-          <Select value={marginMode} onValueChange={(v) => setMarginMode(v as any)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="global">Global Margin</SelectItem>
-              <SelectItem value="per-supplier">Per Supplier Default</SelectItem>
-              <SelectItem value="per-item">Per Line Item</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Margin Info</Label>
+          <p className="text-xs text-muted-foreground mt-1 p-2 bg-muted/30 rounded">
+            Each line item's margin is saved individually. Use "Apply to All" to set a global margin, or edit each line directly.
+          </p>
         </div>
       </div>
 
-      {/* Global Margin Control */}
-      {marginMode === "global" && (
-        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-          <Percent className="h-4 w-4 text-muted-foreground" />
-          <Label className="shrink-0">Global Margin:</Label>
-          <Input
-            type="number"
-            className="w-24"
-            value={globalMargin}
-            onChange={(e) => setGlobalMargin(parseInt(e.target.value) || 0)}
-            min={0}
-            max={99}
-          />
-          <span className="text-sm text-muted-foreground">%</span>
-          <span className="text-xs text-muted-foreground">(Sell = Cost &divide; {(1 - globalMargin / 100).toFixed(2)})</span>
-          <Button variant="outline" size="sm" onClick={applyGlobalMargin}>
-            Apply to Selected
-          </Button>
-        </div>
-      )}
+      {/* Global Margin Control — always visible */}
+      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+        <Percent className="h-4 w-4 text-muted-foreground" />
+        <Label className="shrink-0">Global Margin:</Label>
+        <Input
+          type="number"
+          className="w-24"
+          value={globalMargin}
+          onChange={(e) => setGlobalMargin(parseInt(e.target.value) || 0)}
+          min={0}
+          max={99}
+        />
+        <span className="text-sm text-muted-foreground">%</span>
+        <span className="text-xs text-muted-foreground">(Sell = Cost &divide; {(1 - globalMargin / 100).toFixed(2)})</span>
+        <Button variant="outline" size="sm" onClick={applyGlobalMargin}>
+          Apply to All Items
+        </Button>
+      </div>
 
       {/* Line Items Selection */}
       <div>
@@ -945,20 +988,31 @@ function QuoteBuilder({
                       ${cost.toFixed(2)}
                     </td>
                     <td className="p-3 text-right">
-                      {isSelected && marginMode === "per-item" ? (
-                        <Input
-                          type="number"
-                          className="w-20 h-7 text-right text-xs"
-                          value={data?.margin ?? margin}
-                          onChange={(e) =>
-                            updateItemMargin(item.id, parseInt(e.target.value) || 0)
+                      <Input
+                        type="number"
+                        className="w-20 h-7 text-right text-xs"
+                        value={isSelected ? (data?.margin ?? margin) : margin}
+                        onChange={(e) => {
+                          const newMargin = parseInt(e.target.value) || 0;
+                          if (isSelected) {
+                            updateItemMargin(item.id, newMargin);
+                          } else {
+                            // Auto-select the item when editing its margin
+                            const clampedMargin = Math.min(99, Math.max(0, newMargin));
+                            const newSelected = new Map(selectedItems);
+                            newSelected.set(item.id, {
+                              margin: clampedMargin,
+                              quantity: item.quantity,
+                              description: item.description || "",
+                              costPrice: parseFloat(item.costPrice),
+                            });
+                            setSelectedItems(newSelected);
+                            saveMarginToDb(item.id, clampedMargin);
                           }
-                          min={0}
-                          max={99}
-                        />
-                      ) : (
-                        <span className="text-xs">{margin}%</span>
-                      )}
+                        }}
+                        min={0}
+                        max={99}
+                      />
                     </td>
                     <td className="p-3 text-right font-mono font-medium">
                       ${sellPrice.toFixed(2)}

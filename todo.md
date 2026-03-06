@@ -126,3 +126,8 @@
 - [x] Update database column comments/labels (conceptual — field names stay same for compatibility)
 - [x] Update PDF generation to use margin-based sell prices
 - [x] Update vitest tests for margin calculation
+- [x] Add persistent margin per line item — save margin to DB so it doesn't reset to 20% on deselect
+- [x] Allow individual line item margin editing regardless of margin mode
+- [x] Add marginPercent column to supplierQuoteLineItems table (already existed on lineItems)
+- [x] Add tRPC procedure to update line item margin
+- [x] Load saved margins in quote builder and use them as defaults

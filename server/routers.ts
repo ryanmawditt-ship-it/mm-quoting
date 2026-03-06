@@ -24,6 +24,8 @@ import {
   updateCustomerQuoteStatus,
   createCustomerQuoteLineItem,
   getCustomerQuoteLineItems,
+  updateLineItemMargin,
+  updateLineItemMargins,
 } from "./db";
 
 export const appRouter = router({
@@ -198,6 +200,12 @@ export const appRouter = router({
     getBySupplierQuote: protectedProcedure
       .input(z.object({ supplierQuoteId: z.number() }))
       .query(({ input }) => getLineItemsBySupplierQuote(input.supplierQuoteId)),
+    updateMargin: protectedProcedure
+      .input(z.object({ id: z.number(), marginPercent: z.number().min(0).max(99) }))
+      .mutation(({ input }) => updateLineItemMargin(input.id, input.marginPercent)),
+    updateMargins: protectedProcedure
+      .input(z.object({ items: z.array(z.object({ id: z.number(), marginPercent: z.number().min(0).max(99) })) }))
+      .mutation(({ input }) => updateLineItemMargins(input.items)),
   }),
 
   // Customer Quotes

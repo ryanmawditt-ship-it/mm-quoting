@@ -110,3 +110,8 @@
 - [x] Add server-side password verification endpoint
 - [x] Protect all dashboard routes behind password check
 - [x] Allow user to set the site password via secrets/env
+- [x] Remove all authentication — make site fully open access (no login/password)
+- [x] Ensure all tRPC procedures work without requiring a user session
+- [x] Ensure API routes work without requiring authentication
+- [x] Test PDF scanner end-to-end with real supplier quote (47 items extracted from Everlite quote)
+- [ ] Test customer quote generation end-to-end

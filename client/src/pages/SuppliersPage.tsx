@@ -67,7 +67,7 @@ export default function SuppliersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Suppliers</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your suppliers and their default markup percentages
+            Manage your suppliers and their default margin percentages
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -122,13 +122,13 @@ export default function SuppliersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="markup">Default Markup %</Label>
+                <Label htmlFor="margin">Default Margin %</Label>
                 <div className="relative">
                   <Input
-                    id="markup"
+                    id="margin"
                     type="number"
                     min={0}
-                    max={500}
+                    max={99}
                     placeholder="20"
                     value={form.defaultMarkupPercent}
                     onChange={(e) =>
@@ -139,7 +139,8 @@ export default function SuppliersPage() {
                   <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  This markup will be auto-applied when importing quotes from this supplier.
+                  This margin will be auto-applied when importing quotes from this supplier.
+                  E.g., 5% margin: Sell = Cost &divide; 0.95
                 </p>
               </div>
               <div className="flex justify-end gap-3 pt-2">
@@ -184,7 +185,7 @@ export default function SuppliersPage() {
             <Truck className="h-12 w-12 text-muted-foreground/40 mb-4" />
             <h3 className="font-semibold text-lg mb-1">No suppliers yet</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-              Add your suppliers to set default markup percentages and manage their quotes.
+              Add your suppliers to set default margin percentages and manage their quotes.
             </p>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -222,7 +223,7 @@ export default function SuppliersPage() {
                     </div>
                   </div>
                   <Badge variant="secondary" className="shrink-0 text-sm font-semibold">
-                    {supplier.defaultMarkupPercent}% markup
+                    {supplier.defaultMarkupPercent}% margin
                   </Badge>
                 </div>
               </CardContent>

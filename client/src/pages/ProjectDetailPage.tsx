@@ -571,7 +571,7 @@ function SupplierQuoteCard({
           </div>
           <div className="flex items-center gap-2">
             {supplier && (
-              <Badge variant="secondary">{supplier.defaultMarkupPercent}% default markup</Badge>
+              <Badge variant="secondary">{supplier.defaultMarkupPercent}% default margin</Badge>
             )}
             {supplierQuote.pdfUrl && (
               <Button
@@ -665,9 +665,9 @@ function QuoteBuilder({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [selectedItems, setSelectedItems] = useState<Map<number, { markup: number; quantity: number; description: string; costPrice: number }>>(new Map());
-  const [globalMarkup, setGlobalMarkup] = useState<number>(20);
-  const [markupMode, setMarkupMode] = useState<"global" | "per-supplier" | "per-item">("global");
+  const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number }>>(new Map());
+  const [globalMargin, setGlobalMargin] = useState<number>(20);
+  const [marginMode, setMarginMode] = useState<"global" | "per-supplier" | "per-item">("global");
   const [salespersonId, setSalespersonId] = useState<string>("");
   const [jobTitle, setJobTitle] = useState(project.name || "");
   const [validDays, setValidDays] = useState(28);
@@ -697,14 +697,14 @@ function QuoteBuilder({
     if (newSelected.has(itemId)) {
       newSelected.delete(itemId);
     } else {
-      const defaultMarkup =
-        markupMode === "global"
-          ? globalMarkup
-          : markupMode === "per-supplier"
+      const defaultMargin =
+        marginMode === "global"
+          ? globalMargin
+          : marginMode === "per-supplier"
           ? supplier?.defaultMarkupPercent || 20
           : supplier?.defaultMarkupPercent || 20;
       newSelected.set(itemId, {
-        markup: defaultMarkup,
+        margin: defaultMargin,
         quantity: item.quantity,
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
@@ -714,14 +714,14 @@ function QuoteBuilder({
   };
 
   const selectAll = () => {
-    const newSelected = new Map<number, { markup: number; quantity: number; description: string; costPrice: number }>();
+    const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number }>();
     allLineItems.forEach(({ item, supplier }) => {
-      const defaultMarkup =
-        markupMode === "global"
-          ? globalMarkup
+      const defaultMargin =
+        marginMode === "global"
+          ? globalMargin
           : supplier?.defaultMarkupPercent || 20;
       newSelected.set(item.id, {
-        markup: defaultMarkup,
+        margin: defaultMargin,
         quantity: item.quantity,
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
@@ -734,29 +734,29 @@ function QuoteBuilder({
     setSelectedItems(new Map());
   };
 
-  const updateItemMarkup = (itemId: number, markup: number) => {
+  const updateItemMargin = (itemId: number, margin: number) => {
     const newSelected = new Map(selectedItems);
     const existing = newSelected.get(itemId);
     if (existing) {
-      newSelected.set(itemId, { ...existing, markup });
+      newSelected.set(itemId, { ...existing, margin });
     }
     setSelectedItems(newSelected);
   };
 
-  // Apply global markup to all selected items
-  const applyGlobalMarkup = () => {
+  // Apply global margin to all selected items
+  const applyGlobalMargin = () => {
     const newSelected = new Map(selectedItems);
     newSelected.forEach((val, key) => {
-      newSelected.set(key, { ...val, markup: globalMarkup });
+      newSelected.set(key, { ...val, margin: globalMargin });
     });
     setSelectedItems(newSelected);
   };
 
-  // Calculate totals
+  // Calculate totals using margin formula: Sell = Cost / (1 - margin/100)
   const totals = useMemo(() => {
     let totalExclGst = 0;
     selectedItems.forEach((val) => {
-      const sellPrice = val.costPrice * (1 + val.markup / 100);
+      const sellPrice = val.margin >= 100 ? val.costPrice : val.costPrice / (1 - val.margin / 100);
       totalExclGst += sellPrice * val.quantity;
     });
     const gst = totalExclGst * 0.1;
@@ -777,7 +777,7 @@ function QuoteBuilder({
         quantity: data.quantity,
         description: data.description,
         costPrice: data.costPrice,
-        markupPercent: data.markup,
+        marginPercent: data.margin,
         lineOrder: idx + 1,
       }));
 
@@ -790,7 +790,7 @@ function QuoteBuilder({
           salespersonId: salespersonId ? parseInt(salespersonId) : undefined,
           jobTitle,
           validDays,
-          globalMarkupPercent: markupMode === "global" ? globalMarkup : undefined,
+          globalMarginPercent: marginMode === "global" ? globalMargin : undefined,
         }),
       });
 
@@ -848,13 +848,13 @@ function QuoteBuilder({
           />
         </div>
         <div className="space-y-2">
-          <Label>Markup Mode</Label>
-          <Select value={markupMode} onValueChange={(v) => setMarkupMode(v as any)}>
+          <Label>Margin Mode</Label>
+          <Select value={marginMode} onValueChange={(v) => setMarginMode(v as any)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="global">Global Markup</SelectItem>
+              <SelectItem value="global">Global Margin</SelectItem>
               <SelectItem value="per-supplier">Per Supplier Default</SelectItem>
               <SelectItem value="per-item">Per Line Item</SelectItem>
             </SelectContent>
@@ -862,21 +862,22 @@ function QuoteBuilder({
         </div>
       </div>
 
-      {/* Global Markup Control */}
-      {markupMode === "global" && (
+      {/* Global Margin Control */}
+      {marginMode === "global" && (
         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
           <Percent className="h-4 w-4 text-muted-foreground" />
-          <Label className="shrink-0">Global Markup:</Label>
+          <Label className="shrink-0">Global Margin:</Label>
           <Input
             type="number"
             className="w-24"
-            value={globalMarkup}
-            onChange={(e) => setGlobalMarkup(parseInt(e.target.value) || 0)}
+            value={globalMargin}
+            onChange={(e) => setGlobalMargin(parseInt(e.target.value) || 0)}
             min={0}
-            max={500}
+            max={99}
           />
           <span className="text-sm text-muted-foreground">%</span>
-          <Button variant="outline" size="sm" onClick={applyGlobalMarkup}>
+          <span className="text-xs text-muted-foreground">(Sell = Cost &divide; {(1 - globalMargin / 100).toFixed(2)})</span>
+          <Button variant="outline" size="sm" onClick={applyGlobalMargin}>
             Apply to Selected
           </Button>
         </div>
@@ -908,7 +909,7 @@ function QuoteBuilder({
                 <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
                 <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
                 <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
-                <th className="p-3 text-right font-medium text-muted-foreground w-24">Markup %</th>
+                <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
                 <th className="p-3 text-right font-medium text-muted-foreground">Sell Price</th>
                 <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
               </tr>
@@ -918,8 +919,9 @@ function QuoteBuilder({
                 const isSelected = selectedItems.has(item.id);
                 const data = selectedItems.get(item.id);
                 const cost = parseFloat(item.costPrice);
-                const markup = data?.markup ?? (supplier?.defaultMarkupPercent || 20);
-                const sellPrice = cost * (1 + markup / 100);
+                const margin = data?.margin ?? (supplier?.defaultMarkupPercent || 20);
+                // Margin formula: Sell = Cost / (1 - margin/100)
+                const sellPrice = margin >= 100 ? cost : cost / (1 - margin / 100);
                 const qty = data?.quantity ?? item.quantity;
 
                 return (
@@ -943,18 +945,19 @@ function QuoteBuilder({
                       ${cost.toFixed(2)}
                     </td>
                     <td className="p-3 text-right">
-                      {isSelected && markupMode === "per-item" ? (
+                      {isSelected && marginMode === "per-item" ? (
                         <Input
                           type="number"
                           className="w-20 h-7 text-right text-xs"
-                          value={data?.markup ?? markup}
+                          value={data?.margin ?? margin}
                           onChange={(e) =>
-                            updateItemMarkup(item.id, parseInt(e.target.value) || 0)
+                            updateItemMargin(item.id, parseInt(e.target.value) || 0)
                           }
                           min={0}
+                          max={99}
                         />
                       ) : (
-                        <span className="text-xs">{markup}%</span>
+                        <span className="text-xs">{margin}%</span>
                       )}
                     </td>
                     <td className="p-3 text-right font-mono font-medium">

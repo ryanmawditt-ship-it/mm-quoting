@@ -100,7 +100,7 @@ describe("Salespersons", () => {
 });
 
 describe("Suppliers", () => {
-  it("creates a supplier with default markup", async () => {
+  it("creates a supplier with default margin", async () => {
     const { ctx } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
@@ -122,7 +122,7 @@ describe("Suppliers", () => {
     }
   });
 
-  it("defaults markup to 0 when not specified", async () => {
+  it("defaults margin to 0 when not specified", async () => {
     const { ctx } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
@@ -332,9 +332,9 @@ describe("Customer Quotes", () => {
           });
           expect(cqItems.length).toBeGreaterThan(0);
 
-          // Verify sell price calculation
+          // Verify sell price calculation using margin formula: Sell = Cost / (1 - margin/100)
           const cqItem = cqItems[0];
-          const expectedSellPrice = costPrice * (1 + markupPercent / 100);
+          const expectedSellPrice = costPrice / (1 - markupPercent / 100);
           expect(parseFloat(cqItem.sellPrice)).toBeCloseTo(expectedSellPrice, 2);
         }
       }
@@ -368,35 +368,45 @@ describe("Customer Quotes", () => {
   });
 });
 
-describe("GST Calculation", () => {
-  it("correctly calculates sell price with markup", () => {
+describe("Margin Calculation", () => {
+  it("correctly calculates sell price with margin (Sell = Cost / (1 - margin/100))", () => {
     const costPrice = 45.5;
-    const markupPercent = 20;
-    const sellPrice = costPrice * (1 + markupPercent / 100);
-    expect(sellPrice).toBeCloseTo(54.6, 2);
+    const marginPercent = 20;
+    // Sell = 45.5 / (1 - 0.20) = 45.5 / 0.80 = 56.875
+    const sellPrice = costPrice / (1 - marginPercent / 100);
+    expect(sellPrice).toBeCloseTo(56.875, 2);
 
     const gst = sellPrice * 0.1;
-    expect(gst).toBeCloseTo(5.46, 2);
+    expect(gst).toBeCloseTo(5.6875, 2);
 
     const totalInclGst = sellPrice + gst;
-    expect(totalInclGst).toBeCloseTo(60.06, 2);
+    expect(totalInclGst).toBeCloseTo(62.5625, 2);
   });
 
-  it("handles zero markup correctly", () => {
+  it("handles zero margin correctly", () => {
     const costPrice = 100;
-    const markupPercent = 0;
-    const sellPrice = costPrice * (1 + markupPercent / 100);
+    const marginPercent = 0;
+    const sellPrice = costPrice / (1 - marginPercent / 100);
     expect(sellPrice).toBe(100);
 
     const gst = sellPrice * 0.1;
     expect(gst).toBe(10);
   });
 
-  it("handles high markup correctly", () => {
+  it("handles 5% margin correctly (divide by 0.95)", () => {
+    const costPrice = 100;
+    const marginPercent = 5;
+    // Sell = 100 / 0.95 = 105.2631...
+    const sellPrice = costPrice / (1 - marginPercent / 100);
+    expect(sellPrice).toBeCloseTo(105.26, 1);
+  });
+
+  it("handles high margin correctly", () => {
     const costPrice = 50;
-    const markupPercent = 150;
-    const sellPrice = costPrice * (1 + markupPercent / 100);
-    expect(sellPrice).toBe(125);
+    const marginPercent = 40;
+    // Sell = 50 / (1 - 0.40) = 50 / 0.60 = 83.333...
+    const sellPrice = costPrice / (1 - marginPercent / 100);
+    expect(sellPrice).toBeCloseTo(83.33, 1);
   });
 });
 

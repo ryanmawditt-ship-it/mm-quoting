@@ -118,3 +118,11 @@
 - [x] Fix: File upload doesn't open file picker or support drag-and-drop
 - [x] Remove supplier selection from upload — auto-extract supplier info from PDF
 - [x] Add proper click-to-browse and drag-and-drop file upload UI
+- [x] Change pricing model from markup to margin (Sell = Cost ÷ (1 - margin%))
+- [x] Update all UI labels from "markup" to "margin"
+- [x] Update backend calculation in apiRoutes.ts (customer quote generation)
+- [x] Update frontend calculation in ProjectDetailPage.tsx (quote builder)
+- [x] Update supplier default field label from "default markup" to "default margin"
+- [x] Update database column comments/labels (conceptual — field names stay same for compatibility)
+- [x] Update PDF generation to use margin-based sell prices
+- [x] Update vitest tests for margin calculation

@@ -257,7 +257,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
       return;
     }
 
-    const { projectId, items, salespersonId, jobTitle, validDays, globalMarkupPercent } = req.body;
+    const { projectId, items, salespersonId, jobTitle, validDays, globalMarginPercent } = req.body;
 
     if (!projectId || !items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "Missing projectId or items" });
@@ -293,7 +293,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
       salespersonId ? parseInt(salespersonId) : undefined,
       undefined,
       jobTitle || project.name,
-      globalMarkupPercent,
+      globalMarginPercent,
       validToDate
     );
 
@@ -313,7 +313,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
       description: string;
       quantity: number;
       costPrice: number;
-      markupPercent: number;
+      marginPercent: number;
       sellPrice: number;
       leadTimeDays: number | null;
       unitOfMeasure: string;
@@ -321,8 +321,9 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
 
     for (const item of items) {
       const costPrice = typeof item.costPrice === "string" ? parseFloat(item.costPrice) : item.costPrice;
-      const markupPercent = item.markupPercent || globalMarkupPercent || 0;
-      const sellPrice = costPrice * (1 + markupPercent / 100);
+      const marginPercent = item.marginPercent || globalMarginPercent || 0;
+      // Margin formula: Sell Price = Cost / (1 - margin/100)
+      const sellPrice = marginPercent >= 100 ? costPrice : costPrice / (1 - marginPercent / 100);
 
       // Get the original line item for product code and lead time
       const origItem = await getLineItemById(item.lineItemId);
@@ -333,7 +334,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         item.quantity,
         item.description || origItem?.description || "",
         String(costPrice),
-        markupPercent,
+        marginPercent,
         item.lineOrder
       );
 
@@ -343,7 +344,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         description: item.description || origItem?.description || "",
         quantity: item.quantity,
         costPrice,
-        markupPercent,
+        marginPercent,
         sellPrice,
         leadTimeDays: origItem?.leadTimeDays || null,
         unitOfMeasure: origItem?.unitOfMeasure || "EA",
@@ -416,7 +417,7 @@ interface QuotePDFData {
     description: string;
     quantity: number;
     costPrice: number;
-    markupPercent: number;
+    marginPercent: number;
     sellPrice: number;
     leadTimeDays: number | null;
     unitOfMeasure: string;

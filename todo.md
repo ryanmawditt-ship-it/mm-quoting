@@ -104,3 +104,4 @@
 
 ## Bugs
 - [x] Fix: After signing in, user is redirected back to Home screen instead of the dashboard
+- [x] Fix: Sign-in flow completely broken - user cannot authenticate at all

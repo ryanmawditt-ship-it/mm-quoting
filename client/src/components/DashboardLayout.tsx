@@ -21,21 +21,22 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { FolderKanban, LogOut, PanelLeft, Settings, Truck, Zap } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: FolderKanban, label: "Projects", path: "/dashboard" },
+  { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers" },
+  { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 280;
+const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 200;
-const MAX_WIDTH = 480;
+const MAX_WIDTH = 400;
 
 export default function DashboardLayout({
   children,
@@ -61,11 +62,15 @@ export default function DashboardLayout({
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
+            <div className="flex items-center gap-2">
+              <Zap className="h-8 w-8 text-primary" />
+              <span className="text-2xl font-bold tracking-tight">MM Quoting</span>
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight text-center">
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              Access to the quoting system requires authentication.
             </p>
           </div>
           <Button
@@ -112,8 +117,14 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+
+  const activeMenuItem = menuItems.find(item => {
+    if (item.path === "/dashboard") {
+      return location === "/dashboard" || location.startsWith("/dashboard/projects");
+    }
+    return location.startsWith(item.path);
+  });
 
   useEffect(() => {
     if (isCollapsed) {
@@ -124,7 +135,6 @@ function DashboardLayoutContent({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       const newWidth = e.clientX - sidebarLeft;
       if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
@@ -170,8 +180,9 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
+                  <Zap className="h-5 w-5 text-primary shrink-0" />
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    MM Quoting
                   </span>
                 </div>
               ) : null}
@@ -181,7 +192,9 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
-                const isActive = location === item.path;
+                const isActive = item.path === "/dashboard"
+                  ? (location === "/dashboard" || location.startsWith("/dashboard/projects"))
+                  : location.startsWith(item.path);
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
@@ -257,7 +270,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
     </>
   );

@@ -135,3 +135,6 @@
 - [x] Proper pagination for multi-page quotes with repeated table headers
 - [x] Clean typography, good whitespace, subtle colour accents
 - [x] Professional table layout that works for 4 or 47 line items
+- [x] Fix: Product descriptions getting truncated in PDF — must show full descriptions with dynamic row heights
+- [x] Update AI extraction to read lead times / delivery times from supplier quotes
+- [x] Ensure lead time data is stored and displayed in the quote builder and PDF

@@ -91,15 +91,22 @@ For each line item, extract:
 - itemNumber: the sequential number (integer)
 - type: the item type code (e.g., "AH1 BULB", "AL3", etc.)
 - productCode: the product/part code
-- description: full product description
+- description: the FULL and COMPLETE product description exactly as written. Include all technical specifications, model details, colour temperatures, wattages, dimensions, finishes, and any other details. Do NOT truncate or summarise.
 - quantity: number of units (integer)
 - unitPrice: unit price as a number (no currency symbols)
-- leadTimeDays: lead time in days if mentioned (integer or null)
+- leadTimeDays: lead time in days. Look carefully for this information — it may appear:
+  * Per line item in a "Lead Time" or "LT" column
+  * In a general note/footer like "Lead time: 4-6 weeks" or "Delivery: 14 days"
+  * As "ex-stock", "in stock" (use 0 days), or "indent" / "made to order"
+  * Convert weeks to days (1 week = 7 days). If a range like "4-6 weeks" is given, use the higher number (42 days)
+  * If no lead time info exists at all for an item, use null
 - unitOfMeasure: unit of measure (default "EA")
 
 Also extract:
 - quoteNumber: the supplier's quote reference number
 - quoteDate: the date of the quote (ISO format)
+- generalLeadTimeDays: if there is a blanket/general lead time mentioned for all items (e.g., in the footer or notes section), extract it here as an integer in days. Otherwise null.
+- deliveryNotes: any delivery or freight notes mentioned in the quote (e.g., "Free delivery to site", "Freight extra", etc.). Otherwise null.
 
 Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
         },
@@ -153,7 +160,9 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
                 },
               },
             },
-            required: ["supplierName", "supplierContact", "supplierEmail", "supplierPhone", "quoteNumber", "quoteDate", "lineItems"],
+            generalLeadTimeDays: { type: ["number", "null"], description: "Blanket lead time for all items if mentioned" },
+            deliveryNotes: { type: ["string", "null"], description: "Delivery or freight notes" },
+            required: ["supplierName", "supplierContact", "supplierEmail", "supplierPhone", "quoteNumber", "quoteDate", "lineItems", "generalLeadTimeDays", "deliveryNotes"],
             additionalProperties: false,
           },
         },
@@ -201,10 +210,16 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
       return;
     }
 
+    // Use general lead time as fallback for items without specific lead times
+    const generalLT = extracted.generalLeadTimeDays || null;
+
     // 5. Save extracted line items to database
     const savedItems: any[] = [];
     if (extracted.lineItems && Array.isArray(extracted.lineItems)) {
       for (const item of extracted.lineItems) {
+        // Use item-specific lead time, or fall back to general lead time
+        const itemLeadTime = item.leadTimeDays ?? generalLT;
+
         await createLineItem(
           supplierQuote.id,
           item.productCode || "UNKNOWN",
@@ -214,7 +229,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
           item.itemNumber,
           item.type,
           item.unitOfMeasure || "EA",
-          item.leadTimeDays,
+          itemLeadTime,
           undefined
         );
         savedItems.push({
@@ -223,7 +238,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
           description: item.description,
           quantity: item.quantity,
           costPrice: String(item.unitPrice),
-          leadTimeDays: item.leadTimeDays,
+          leadTimeDays: itemLeadTime,
           unitOfMeasure: item.unitOfMeasure,
         });
       }
@@ -236,6 +251,8 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
       supplierId,
       quoteNumber: extracted.quoteNumber,
       quoteDate: extracted.quoteDate,
+      generalLeadTimeDays: generalLT,
+      deliveryNotes: extracted.deliveryNotes || null,
       extractedItems: savedItems,
       itemCount: savedItems.length,
     });
@@ -488,8 +505,19 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       const usedW = COL.num.w + COL.code.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w + COL.gst.w + COL.total.w;
       COL.desc.w = CW - usedW - 16; // 16 for padding
 
-      const ROW_H = 22;
+      const MIN_ROW_H = 22;
       const HDR_H = 26;
+      const ROW_PAD_TOP = 6;
+      const ROW_PAD_BOT = 6;
+      const DESC_FONT_SIZE = 7;
+
+      // Helper: measure the height a description will need
+      const measureDescHeight = (text: string): number => {
+        const descW = COL.desc.w - 4;
+        doc.fontSize(DESC_FONT_SIZE).font("Helvetica");
+        const h = doc.heightOfString(text, { width: descW });
+        return h;
+      };
 
       const drawTableHeader = (y: number): number => {
         // Header background
@@ -655,8 +683,12 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         totalExclGst += lineExcl;
         totalGst += lineGst;
 
+        // Measure how tall this row needs to be for the full description
+        const descHeight = measureDescHeight(item.description);
+        const rowH = Math.max(MIN_ROW_H, descHeight + ROW_PAD_TOP + ROW_PAD_BOT);
+
         // New page check — leave room for totals (~100pt)
-        if (tableY + ROW_H > PH - MB - 100) {
+        if (tableY + rowH > PH - MB - 100) {
           doc.addPage();
           // Re-draw accent bar
           doc.save();
@@ -668,14 +700,14 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         // Alternating row bg
         if (i % 2 === 0) {
           doc.save();
-          doc.rect(ML, tableY, CW, ROW_H).fillColor(C.rowAlt).fill();
+          doc.rect(ML, tableY, CW, rowH).fillColor(C.rowAlt).fill();
           doc.restore();
         }
 
         // Bottom border for each row
-        doc.moveTo(ML, tableY + ROW_H).lineTo(PW - MR, tableY + ROW_H).strokeColor(C.border).lineWidth(0.3).stroke();
+        doc.moveTo(ML, tableY + rowH).lineTo(PW - MR, tableY + rowH).strokeColor(C.border).lineWidth(0.3).stroke();
 
-        const rowTextY = tableY + 6;
+        const rowTextY = tableY + ROW_PAD_TOP;
         doc.fontSize(7.5).font("Helvetica").fillColor(C.body);
 
         let x = ML + 8;
@@ -687,39 +719,39 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         doc.text(item.productCode, x, rowTextY, { width: COL.code.w - 4, align: COL.code.align });
         x += COL.code.w;
 
-        // Description — truncate if too long
-        doc.font("Helvetica").fillColor(C.body);
-        const maxDescChars = Math.floor(COL.desc.w / 3.5);
-        const desc = item.description.length > maxDescChars
-          ? item.description.substring(0, maxDescChars - 3) + "..."
-          : item.description;
-        doc.text(desc, x, rowTextY, { width: COL.desc.w - 4, align: COL.desc.align });
+        // Description — full text, wraps dynamically
+        doc.fontSize(DESC_FONT_SIZE).font("Helvetica").fillColor(C.body);
+        doc.text(item.description, x, rowTextY, { width: COL.desc.w - 4, align: COL.desc.align });
         x += COL.desc.w;
 
-        doc.fillColor(C.muted);
-        doc.text(item.leadTimeDays ? `${item.leadTimeDays}d` : "-", x, rowTextY, { width: COL.lt.w, align: COL.lt.align });
+        // Remaining columns vertically centred in the row
+        const centreY = tableY + (rowH / 2) - 4;
+        doc.fontSize(7.5);
+
+        doc.font("Helvetica").fillColor(C.muted);
+        doc.text(item.leadTimeDays ? `${item.leadTimeDays}d` : "-", x, centreY, { width: COL.lt.w, align: COL.lt.align, lineBreak: false });
         x += COL.lt.w;
 
         doc.fillColor(C.body);
-        doc.text(String(item.quantity), x, rowTextY, { width: COL.qty.w, align: COL.qty.align });
+        doc.text(String(item.quantity), x, centreY, { width: COL.qty.w, align: COL.qty.align, lineBreak: false });
         x += COL.qty.w;
 
         doc.fillColor(C.muted);
-        doc.text(item.unitOfMeasure, x, rowTextY, { width: COL.uom.w, align: COL.uom.align });
+        doc.text(item.unitOfMeasure, x, centreY, { width: COL.uom.w, align: COL.uom.align, lineBreak: false });
         x += COL.uom.w;
 
         doc.fillColor(C.dark);
-        doc.text(`$${fmtMoney(item.sellPrice)}`, x, rowTextY, { width: COL.price.w, align: COL.price.align });
+        doc.text(`$${fmtMoney(item.sellPrice)}`, x, centreY, { width: COL.price.w, align: COL.price.align, lineBreak: false });
         x += COL.price.w;
 
         doc.fillColor(C.muted);
-        doc.text(`$${fmtMoney(lineGst)}`, x, rowTextY, { width: COL.gst.w, align: COL.gst.align });
+        doc.text(`$${fmtMoney(lineGst)}`, x, centreY, { width: COL.gst.w, align: COL.gst.align, lineBreak: false });
         x += COL.gst.w;
 
         doc.font("Helvetica-Bold").fillColor(C.dark);
-        doc.text(`$${fmtMoney(lineIncl)}`, x, rowTextY, { width: COL.total.w, align: COL.total.align });
+        doc.text(`$${fmtMoney(lineIncl)}`, x, centreY, { width: COL.total.w, align: COL.total.align, lineBreak: false });
 
-        tableY += ROW_H;
+        tableY += rowH;
       }
 
       // ================================================================

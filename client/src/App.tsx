@@ -11,21 +11,47 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 
+function DashboardWrapper({ children }: { children: React.ReactNode }) {
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/dashboard"}>
         {() => (
-          <DashboardLayout>
-            <Switch>
-              <Route path={"/dashboard/projects"} component={ProjectsPage} />
-              <Route path={"/dashboard/projects/:id"} component={ProjectDetailPage} />
-              <Route path={"/dashboard/suppliers"} component={SuppliersPage} />
-              <Route path={"/dashboard/settings"} component={SettingsPage} />
-              <Route path={"/dashboard"} component={ProjectsPage} />
-            </Switch>
-          </DashboardLayout>
+          <DashboardWrapper>
+            <ProjectsPage />
+          </DashboardWrapper>
+        )}
+      </Route>
+      <Route path={"/dashboard/projects"}>
+        {() => (
+          <DashboardWrapper>
+            <ProjectsPage />
+          </DashboardWrapper>
+        )}
+      </Route>
+      <Route path={"/dashboard/projects/:id"}>
+        {() => (
+          <DashboardWrapper>
+            <ProjectDetailPage />
+          </DashboardWrapper>
+        )}
+      </Route>
+      <Route path={"/dashboard/suppliers"}>
+        {() => (
+          <DashboardWrapper>
+            <SuppliersPage />
+          </DashboardWrapper>
+        )}
+      </Route>
+      <Route path={"/dashboard/settings"}>
+        {() => (
+          <DashboardWrapper>
+            <SettingsPage />
+          </DashboardWrapper>
         )}
       </Route>
       <Route path={"/404"} component={NotFound} />

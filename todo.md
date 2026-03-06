@@ -101,3 +101,6 @@
 - [x] Professional PDF output matching MM Albion format
 - [x] Quote versioning with auto-incrementing numbers
 - [x] Validity date tracking with expiry warnings
+
+## Bugs
+- [x] Fix: After signing in, user is redirected back to Home screen instead of the dashboard

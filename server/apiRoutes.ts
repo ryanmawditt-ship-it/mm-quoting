@@ -14,6 +14,7 @@ import {
   getLineItemById,
   getLineItemsBySupplierQuote,
   getSupplierById,
+  getOrCreateSupplierByName,
   createCustomerQuote,
   createCustomerQuoteLineItem,
   getCustomerQuoteLineItems,
@@ -62,10 +63,10 @@ apiRouter.post("/api/upload-supplier-pdf", upload.single("file"), async (req: Re
     }
 
     const file = req.file;
-    const { supplierId, projectId } = req.body;
+    const { projectId } = req.body;
 
-    if (!file || !supplierId || !projectId) {
-      res.status(400).json({ error: "Missing file, supplierId, or projectId" });
+    if (!file || !projectId) {
+      res.status(400).json({ error: "Missing file or projectId" });
       return;
     }
 
@@ -73,30 +74,19 @@ apiRouter.post("/api/upload-supplier-pdf", upload.single("file"), async (req: Re
     const fileKey = `supplier-pdfs/${user.id}/${nanoid()}-${file.originalname}`;
     const { url: pdfUrl } = await storagePut(fileKey, file.buffer, "application/pdf");
 
-    // 2. Create supplier quote record
-    const sqResult = await createSupplierQuote(
-      parseInt(projectId),
-      parseInt(supplierId),
-      undefined,
-      undefined,
-      pdfUrl
-    );
-
-    // Get the inserted ID
-    const allSqs = await getSupplierQuotesByProject(parseInt(projectId));
-    const supplierQuote = allSqs[allSqs.length - 1];
-
-    if (!supplierQuote) {
-      res.status(500).json({ error: "Failed to create supplier quote" });
-      return;
-    }
-
-    // 3. Use AI to extract line items from the PDF
+    // 2. Use AI to extract line items AND supplier info from the PDF
     const extractionResult = await invokeLLM({
       messages: [
         {
           role: "system",
-          content: `You are a data extraction specialist. Extract all line items from the supplier quote PDF. 
+          content: `You are a data extraction specialist. Extract all line items AND supplier company information from the supplier quote PDF.
+
+For the supplier, extract:
+- supplierName: the name of the company that issued this quote
+- supplierContact: contact person name if available
+- supplierEmail: email address if available
+- supplierPhone: phone number if available
+
 For each line item, extract:
 - itemNumber: the sequential number (integer)
 - type: the item type code (e.g., "AH1 BULB", "AL3", etc.)
@@ -118,7 +108,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
           content: [
             {
               type: "text",
-              text: "Extract all line items from this supplier quote PDF. Return the data as JSON.",
+              text: "Extract all line items and supplier information from this supplier quote PDF. Return the data as JSON.",
             },
             {
               type: "file_url",
@@ -138,6 +128,10 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
           schema: {
             type: "object",
             properties: {
+              supplierName: { type: "string", description: "Name of the supplier company" },
+              supplierContact: { type: ["string", "null"], description: "Contact person name" },
+              supplierEmail: { type: ["string", "null"], description: "Supplier email" },
+              supplierPhone: { type: ["string", "null"], description: "Supplier phone" },
               quoteNumber: { type: ["string", "null"], description: "Supplier quote reference number" },
               quoteDate: { type: ["string", "null"], description: "Quote date in ISO format" },
               lineItems: {
@@ -159,7 +153,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
                 },
               },
             },
-            required: ["quoteNumber", "quoteDate", "lineItems"],
+            required: ["supplierName", "supplierContact", "supplierEmail", "supplierPhone", "quoteNumber", "quoteDate", "lineItems"],
             additionalProperties: false,
           },
         },
@@ -179,7 +173,35 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
       return;
     }
 
-    // 4. Save extracted line items to database
+    // 3. Auto-create or find the supplier from extracted info
+    const supplierName = extracted.supplierName || "Unknown Supplier";
+    const supplierId = await getOrCreateSupplierByName(
+      user.id,
+      supplierName,
+      extracted.supplierContact || undefined,
+      extracted.supplierEmail || undefined,
+      extracted.supplierPhone || undefined
+    );
+
+    // 4. Create supplier quote record
+    await createSupplierQuote(
+      parseInt(projectId),
+      supplierId,
+      extracted.quoteNumber || undefined,
+      extracted.quoteDate ? new Date(extracted.quoteDate) : undefined,
+      pdfUrl
+    );
+
+    // Get the inserted ID
+    const allSqs = await getSupplierQuotesByProject(parseInt(projectId));
+    const supplierQuote = allSqs[allSqs.length - 1];
+
+    if (!supplierQuote) {
+      res.status(500).json({ error: "Failed to create supplier quote" });
+      return;
+    }
+
+    // 5. Save extracted line items to database
     const savedItems: any[] = [];
     if (extracted.lineItems && Array.isArray(extracted.lineItems)) {
       for (const item of extracted.lineItems) {
@@ -210,6 +232,8 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
     res.json({
       success: true,
       supplierQuoteId: supplierQuote.id,
+      supplierName,
+      supplierId,
       quoteNumber: extracted.quoteNumber,
       quoteDate: extracted.quoteDate,
       extractedItems: savedItems,

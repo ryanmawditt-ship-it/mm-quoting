@@ -115,3 +115,6 @@
 - [x] Ensure API routes work without requiring authentication
 - [x] Test PDF scanner end-to-end with real supplier quote (47 items extracted from Everlite quote)
 - [ ] Test customer quote generation end-to-end
+- [x] Fix: File upload doesn't open file picker or support drag-and-drop
+- [x] Remove supplier selection from upload — auto-extract supplier info from PDF
+- [x] Add proper click-to-browse and drag-and-drop file upload UI

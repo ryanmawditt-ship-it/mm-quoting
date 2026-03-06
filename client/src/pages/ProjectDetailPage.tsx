@@ -28,13 +28,13 @@ import {
   Percent,
   Calculator,
   Loader2,
-  Plus,
   Download,
   Clock,
   CheckCircle2,
   AlertCircle,
   XCircle,
   Eye,
+  File,
 } from "lucide-react";
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -68,32 +68,17 @@ export default function ProjectDetailPage() {
   });
 
   // Upload & extraction state
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
   const [extractedItems, setExtractedItems] = useState<any[]>([]);
+  const [extractedSupplierName, setExtractedSupplierName] = useState<string>("");
   const [showExtractedPreview, setShowExtractedPreview] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Customer quote builder state
   const [quoteBuilderOpen, setQuoteBuilderOpen] = useState(false);
-  const [selectedLineItems, setSelectedLineItems] = useState<Set<number>>(new Set());
-  const [globalMarkup, setGlobalMarkup] = useState<number | null>(null);
-  const [lineMarkups, setLineMarkups] = useState<Record<number, number>>({});
 
-  // Get all line items for all supplier quotes
-  const allSupplierQuoteIds = useMemo(() => {
-    return (supplierQuotes || []).map((sq) => sq.id);
-  }, [supplierQuotes]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedSupplierId) {
-      toast.error("Please select a supplier first");
-      return;
-    }
-
+  const processFile = async (file: globalThis.File) => {
     if (file.type !== "application/pdf") {
       toast.error("Please upload a PDF file");
       return;
@@ -101,10 +86,8 @@ export default function ProjectDetailPage() {
 
     setUploading(true);
     try {
-      // Upload PDF to server
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("supplierId", selectedSupplierId);
       formData.append("projectId", projectId.toString());
 
       const response = await fetch("/api/upload-supplier-pdf", {
@@ -113,23 +96,26 @@ export default function ProjectDetailPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Upload failed");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Upload failed");
       }
 
       const result = await response.json();
 
       if (result.extractedItems && result.extractedItems.length > 0) {
         setExtractedItems(result.extractedItems);
+        setExtractedSupplierName(result.supplierName || "Unknown Supplier");
         setShowExtractedPreview(true);
-        toast.success(`Extracted ${result.extractedItems.length} line items from PDF`);
+        toast.success(`Extracted ${result.extractedItems.length} line items from ${result.supplierName || "supplier"}`);
       } else {
         toast.error("No line items could be extracted from this PDF");
       }
 
-      // Refresh supplier quotes
+      // Refresh supplier quotes and suppliers list
       utils.supplierQuotes.getByProject.invalidate({ projectId });
-    } catch (error) {
-      toast.error("Failed to upload and extract PDF");
+      utils.suppliers.list.invalidate();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload and extract PDF");
       console.error(error);
     } finally {
       setUploading(false);
@@ -139,51 +125,41 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  }, [projectId]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
   const handleConfirmExtraction = async () => {
     setShowExtractedPreview(false);
     setExtractedItems([]);
-    setUploadDialogOpen(false);
+    setExtractedSupplierName("");
     utils.supplierQuotes.getByProject.invalidate({ projectId });
     toast.success("Line items saved successfully");
   };
 
   const handleBuildQuote = () => {
     setQuoteBuilderOpen(true);
-  };
-
-  const handleGenerateQuote = async () => {
-    if (selectedLineItems.size === 0) {
-      toast.error("Please select at least one line item");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/generate-customer-quote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId,
-          lineItemIds: Array.from(selectedLineItems),
-          globalMarkupPercent: globalMarkup,
-          lineMarkups,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to generate quote");
-
-      const result = await response.json();
-      toast.success("Customer quote generated successfully");
-      setQuoteBuilderOpen(false);
-      utils.customerQuotes.getByProject.invalidate({ projectId });
-
-      // Download PDF
-      if (result.pdfUrl) {
-        window.open(result.pdfUrl, "_blank");
-      }
-    } catch (error) {
-      toast.error("Failed to generate customer quote");
-      console.error(error);
-    }
   };
 
   if (projectLoading) {
@@ -301,84 +277,63 @@ export default function ProjectDetailPage() {
 
         {/* Supplier Quotes Tab */}
         <TabsContent value="supplier-quotes" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Supplier Quotes</h2>
-              <p className="text-sm text-muted-foreground">
-                Upload supplier quote PDFs to extract line items automatically
-              </p>
-            </div>
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Supplier Quote
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Upload Supplier Quote PDF</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-2">
-                  <div className="space-y-2">
-                    <Label>Select Supplier</Label>
-                    <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a supplier..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(suppliers || []).map((s) => (
-                          <SelectItem key={s.id} value={s.id.toString()}>
-                            {s.name} ({s.defaultMarkupPercent}% markup)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {(!suppliers || suppliers.length === 0) && (
-                      <p className="text-xs text-amber-600">
-                        No suppliers found. Please add a supplier first in the Suppliers page.
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Upload PDF</Label>
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        id="pdf-upload"
-                        disabled={!selectedSupplierId || uploading}
-                      />
-                      <label htmlFor="pdf-upload" className="cursor-pointer">
-                        {uploading ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-sm font-medium">Uploading & extracting...</p>
-                            <p className="text-xs text-muted-foreground">
-                              AI is reading your supplier quote PDF
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2">
-                            <Upload className="h-8 w-8 text-muted-foreground" />
-                            <p className="text-sm font-medium">
-                              Click to upload supplier quote PDF
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              AI will automatically extract all line items
-                            </p>
-                          </div>
-                        )}
-                      </label>
-                    </div>
+          <div>
+            <h2 className="text-lg font-semibold">Supplier Quotes</h2>
+            <p className="text-sm text-muted-foreground">
+              Upload supplier quote PDFs — supplier info and line items are extracted automatically by AI
+            </p>
+          </div>
+
+          {/* Upload Drop Zone */}
+          <Card
+            className={`border-2 border-dashed transition-all cursor-pointer ${
+              dragOver
+                ? "border-primary bg-primary/5 scale-[1.01]"
+                : uploading
+                ? "border-primary/50 bg-primary/5"
+                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+          >
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={uploading}
+              />
+              {uploading ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold">Uploading & extracting...</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      AI is reading the supplier quote PDF and extracting all line items
+                    </p>
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Upload className="h-7 w-7 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">
+                      Drop a supplier quote PDF here, or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      AI will automatically extract the supplier name, quote details, and all line items
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Extracted Items Preview */}
           {showExtractedPreview && extractedItems.length > 0 && (
@@ -386,10 +341,10 @@ export default function ProjectDetailPage() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Eye className="h-4 w-4" />
-                  Extracted Line Items Preview
+                  Extracted from: {extractedSupplierName}
                 </CardTitle>
                 <CardDescription>
-                  Review the extracted items below. Click "Confirm" to save them.
+                  {extractedItems.length} line items extracted. Review below and click "Confirm" to save.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -429,6 +384,7 @@ export default function ProjectDetailPage() {
                     onClick={() => {
                       setShowExtractedPreview(false);
                       setExtractedItems([]);
+                      setExtractedSupplierName("");
                     }}
                   >
                     Discard
@@ -443,32 +399,13 @@ export default function ProjectDetailPage() {
           )}
 
           {/* Supplier Quotes List */}
-          {(!supplierQuotes || supplierQuotes.length === 0) && !showExtractedPreview ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <Upload className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="font-semibold text-lg mb-1">No supplier quotes yet</h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                  Upload a supplier quote PDF to automatically extract line items with AI.
-                </p>
-                <Button onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload First Quote
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
+          {supplierQuotes && supplierQuotes.length > 0 && (
             <div className="space-y-3">
-              {(supplierQuotes || []).map((sq) => (
+              {supplierQuotes.map((sq) => (
                 <SupplierQuoteCard
                   key={sq.id}
                   supplierQuote={sq}
                   suppliers={suppliers || []}
-                  onBuildQuote={handleBuildQuote}
-                  selectedLineItems={selectedLineItems}
-                  setSelectedLineItems={setSelectedLineItems}
-                  lineMarkups={lineMarkups}
-                  setLineMarkups={setLineMarkups}
                 />
               ))}
             </div>
@@ -594,19 +531,9 @@ export default function ProjectDetailPage() {
 function SupplierQuoteCard({
   supplierQuote,
   suppliers,
-  onBuildQuote,
-  selectedLineItems,
-  setSelectedLineItems,
-  lineMarkups,
-  setLineMarkups,
 }: {
   supplierQuote: any;
   suppliers: any[];
-  onBuildQuote: () => void;
-  selectedLineItems: Set<number>;
-  setSelectedLineItems: React.Dispatch<React.SetStateAction<Set<number>>>;
-  lineMarkups: Record<number, number>;
-  setLineMarkups: React.Dispatch<React.SetStateAction<Record<number, number>>>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { data: lineItems } = trpc.lineItems.getBySupplierQuote.useQuery({
@@ -622,24 +549,41 @@ function SupplierQuoteCard({
           className="flex items-center justify-between cursor-pointer"
           onClick={() => setExpanded(!expanded)}
         >
-          <div>
-            <h3 className="font-semibold">
-              {supplier?.name || "Unknown Supplier"}
-              {supplierQuote.quoteNumber && (
-                <span className="text-muted-foreground font-normal ml-2">
-                  #{supplierQuote.quoteNumber}
-                </span>
-              )}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {lineItems?.length || 0} line items
-              {supplierQuote.quoteDate &&
-                ` — ${new Date(supplierQuote.quoteDate).toLocaleDateString("en-AU")}`}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              <File className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold">
+                {supplier?.name || "Unknown Supplier"}
+                {supplierQuote.quoteNumber && (
+                  <span className="text-muted-foreground font-normal ml-2">
+                    #{supplierQuote.quoteNumber}
+                  </span>
+                )}
+              </h3>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {lineItems?.length || 0} line items
+                {supplierQuote.quoteDate &&
+                  ` — ${new Date(supplierQuote.quoteDate).toLocaleDateString("en-AU")}`}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {supplier && (
               <Badge variant="secondary">{supplier.defaultMarkupPercent}% default markup</Badge>
+            )}
+            {supplierQuote.pdfUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(supplierQuote.pdfUrl, "_blank");
+                }}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
             )}
             <Button variant="ghost" size="sm">
               {expanded ? "Collapse" : "Expand"}

@@ -144,6 +144,18 @@ export async function getSupplierById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getOrCreateSupplierByName(userId: number, name: string, contact?: string, email?: string, phone?: string): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  // Try to find existing supplier by name (case-insensitive)
+  const existing = await db.select().from(suppliers).where(eq(suppliers.userId, userId));
+  const match = existing.find(s => s.name.toLowerCase().trim() === name.toLowerCase().trim());
+  if (match) return match.id;
+  // Create new supplier
+  const result = await db.insert(suppliers).values({ userId, name, contact, email, phone, defaultMarkupPercent: 0 });
+  return result[0].insertId;
+}
+
 /**
  * Projects
  */

@@ -114,7 +114,7 @@
 - [x] Ensure all tRPC procedures work without requiring a user session
 - [x] Ensure API routes work without requiring authentication
 - [x] Test PDF scanner end-to-end with real supplier quote (47 items extracted from Everlite quote)
-- [ ] Test customer quote generation end-to-end
+- [x] Test customer quote generation end-to-end
 - [x] Fix: File upload doesn't open file picker or support drag-and-drop
 - [x] Remove supplier selection from upload — auto-extract supplier info from PDF
 - [x] Add proper click-to-browse and drag-and-drop file upload UI
@@ -131,3 +131,7 @@
 - [x] Add marginPercent column to supplierQuoteLineItems table (already existed on lineItems)
 - [x] Add tRPC procedure to update line item margin
 - [x] Load saved margins in quote builder and use them as defaults
+- [x] Redesign customer quote PDF — fresh modern professional design (not copying old system)
+- [x] Proper pagination for multi-page quotes with repeated table headers
+- [x] Clean typography, good whitespace, subtle colour accents
+- [x] Professional table layout that works for 4 or 47 line items

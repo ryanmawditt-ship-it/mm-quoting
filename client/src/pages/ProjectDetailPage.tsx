@@ -899,8 +899,20 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
     return groups;
   }, [lineItems]);
 
-  // If only one group (UNGROUPED) or no types, show flat list
-  const hasTypeGroups = typeGroups.length > 1 || (typeGroups.length === 1 && typeGroups[0].type !== "UNGROUPED");
+  // Only group types with 3+ items; types with 1-2 items show flat
+  const groupableTypes = typeGroups.filter(g => g.type !== "UNGROUPED" && g.items.length >= 3);
+  const flatItems: any[] = [];
+  const groupedTypes: typeof typeGroups = [];
+
+  for (const group of typeGroups) {
+    if (group.type === "UNGROUPED" || group.items.length < 3) {
+      flatItems.push(...group.items);
+    } else {
+      groupedTypes.push(group);
+    }
+  }
+
+  const hasTypeGroups = groupedTypes.length > 0;
 
   const toggleType = (type: string) => {
     setExpandedTypes((prev) => {
@@ -915,6 +927,34 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
     (sum, item) => sum + parseFloat(item.costPrice) * item.quantity,
     0
   );
+
+  // Helper to render a flat item row
+  const renderFlatRow = (item: any, idx: number) => {
+    const cost = parseFloat(item.costPrice);
+    return (
+      <tr key={item.id} className={`border-b last:border-0 ${item.isBundled ? "bg-muted/30" : ""} ${item.quantity === 0 ? "opacity-60" : ""}`}>
+        <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
+        <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
+        <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
+        <td className="py-2 pr-3 max-w-sm text-xs">
+          <span className="block">{item.description}</span>
+          {item.comments && (
+            <div className="mt-1 p-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-[10px] text-amber-800 dark:text-amber-200 whitespace-pre-line">
+              {item.comments}
+            </div>
+          )}
+        </td>
+        <td className="py-2 pr-3 text-right">{item.quantity}</td>
+        <td className="py-2 pr-3 text-right font-mono">
+          {item.isBundled ? <span className="text-muted-foreground text-xs">incl.</span> : `$${cost.toFixed(2)}`}
+        </td>
+        <td className="py-2 pr-3 text-right font-mono">
+          {item.isBundled ? <span className="text-muted-foreground">\u2014</span> : `$${(cost * item.quantity).toFixed(2)}`}
+        </td>
+        <td className="py-2 text-right text-muted-foreground">{item.leadTimeDays || "-"}</td>
+      </tr>
+    );
+  };
 
   if (!hasTypeGroups) {
     // Flat table for items without meaningful type groups
@@ -934,32 +974,7 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
             </tr>
           </thead>
           <tbody>
-            {lineItems.map((item, idx) => {
-              const cost = parseFloat(item.costPrice);
-              return (
-                <tr key={item.id} className={`border-b last:border-0 ${item.isBundled ? "bg-muted/30" : ""} ${item.quantity === 0 ? "opacity-60" : ""}`}>
-                  <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
-                  <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
-                  <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
-                  <td className="py-2 pr-3 max-w-sm text-xs">
-                    <span className="block">{item.description}</span>
-                    {item.comments && (
-                      <div className="mt-1 p-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-[10px] text-amber-800 dark:text-amber-200 whitespace-pre-line">
-                        {item.comments}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 pr-3 text-right">{item.quantity}</td>
-                  <td className="py-2 pr-3 text-right font-mono">
-                    {item.isBundled ? <span className="text-muted-foreground text-xs">incl.</span> : `$${cost.toFixed(2)}`}
-                  </td>
-                  <td className="py-2 pr-3 text-right font-mono">
-                    {item.isBundled ? <span className="text-muted-foreground">\u2014</span> : `$${(cost * item.quantity).toFixed(2)}`}
-                  </td>
-                  <td className="py-2 text-right text-muted-foreground">{item.leadTimeDays || "-"}</td>
-                </tr>
-              );
-            })}
+            {lineItems.map((item, idx) => renderFlatRow(item, idx))}
           </tbody>
           <tfoot>
             <tr className="font-semibold">
@@ -973,7 +988,8 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
     );
   }
 
-  // Grouped table with collapsible type sections
+  // Mixed table: grouped types (3+ items) with collapsible sections, plus flat items
+  let flatIdx = 0;
   return (
     <div className="mt-4 overflow-x-auto">
       <table className="w-full text-sm">
@@ -981,7 +997,7 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
           <tr className="border-b text-left">
             <th className="pb-2 pr-3 font-medium text-muted-foreground w-8"></th>
             <th className="pb-2 pr-3 font-medium text-muted-foreground">Type</th>
-            <th className="pb-2 pr-3 font-medium text-muted-foreground">Items</th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground">Product Code</th>
             <th className="pb-2 pr-3 font-medium text-muted-foreground">Description</th>
             <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Qty</th>
             <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Cost</th>
@@ -990,14 +1006,19 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
           </tr>
         </thead>
         <tbody>
-          {typeGroups.map((group) => {
+          {/* Render flat items first (ungrouped or types with <3 items) */}
+          {flatItems.map((item) => {
+            flatIdx++;
+            return renderFlatRow(item, flatIdx - 1);
+          })}
+          {/* Render grouped types (3+ items) */}
+          {groupedTypes.map((group) => {
             const isExpanded = expandedTypes.has(group.type);
             const itemCount = group.items.length;
-            const totalQty = group.items.reduce((s, i) => s + (i.quantity || 0), 0);
             const maxLT = Math.max(...group.items.map((i) => i.leadTimeDays || 0));
             return (
               <React.Fragment key={group.type}>
-                {/* Summary row — always visible */}
+                {/* Summary row — always visible, shows only total price (no qty) */}
                 <tr
                   className="border-b bg-muted/40 cursor-pointer hover:bg-muted/60 transition-colors"
                   onClick={() => toggleType(group.type)}
@@ -1010,11 +1031,11 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
                     )}
                   </td>
                   <td className="py-2.5 pr-3 font-semibold text-sm">{group.type}</td>
-                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{itemCount} item{itemCount !== 1 ? "s" : ""}</td>
+                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{itemCount} items</td>
                   <td className="py-2.5 pr-3 text-xs text-muted-foreground">
                     {group.items[0]?.description?.substring(0, 60)}{group.items[0]?.description?.length > 60 ? "..." : ""}
                   </td>
-                  <td className="py-2.5 pr-3 text-right font-medium">{totalQty}</td>
+                  <td className="py-2.5 pr-3 text-right"></td>
                   <td className="py-2.5 pr-3 text-right"></td>
                   <td className="py-2.5 pr-3 text-right font-mono font-semibold">${group.total.toFixed(2)}</td>
                   <td className="py-2.5 text-right text-muted-foreground">{maxLT > 0 ? `${maxLT}d` : "-"}</td>
@@ -1268,8 +1289,19 @@ function QuoteBuilderTable({
     return groups;
   }, [allLineItems]);
 
-  // Determine if we have meaningful type groups (more than 1 group, or groups with actual type names)
-  const hasTypeGroups = typeGroups.some((g) => g.type && g.type !== "") && typeGroups.length > 1;
+  // Only group types with 3+ items; types with 1-2 items show flat
+  const groupedTypes: typeof typeGroups = [];
+  const flatEntries: typeof allLineItems = [];
+
+  for (const group of typeGroups) {
+    if (!group.type || group.type === "" || group.items.length < 3) {
+      flatEntries.push(...group.items);
+    } else {
+      groupedTypes.push(group);
+    }
+  }
+
+  const hasTypeGroups = groupedTypes.length > 0;
 
   const toggleType = (key: string) => {
     setExpandedTypes((prev) => {
@@ -1399,14 +1431,15 @@ function QuoteBuilderTable({
     );
   }
 
-  // Grouped table with collapsible type sections
+  // Mixed table: flat items + grouped types (3+ items)
   return (
     <div className="border rounded-lg overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
             <th className="p-3 text-left w-10"></th>
-            <th className="p-3 text-left font-medium text-muted-foreground">Supplier / Type</th>
+            <th className="p-3 text-left font-medium text-muted-foreground">Supplier</th>
+            <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
             <th className="p-3 text-left font-medium text-muted-foreground">Product Code</th>
             <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
             <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
@@ -1417,10 +1450,12 @@ function QuoteBuilderTable({
           </tr>
         </thead>
         <tbody>
-          {typeGroups.map((group) => {
+          {/* Flat items first (ungrouped or types with <3 items) */}
+          {flatEntries.map(({ item, supplier }) => renderItemRow(item, supplier, false))}
+          {/* Grouped types (3+ items) */}
+          {groupedTypes.map((group) => {
             const isExpanded = expandedTypes.has(group.key);
             const itemCount = group.items.length;
-            const totalQty = group.items.reduce((s, { item }) => s + (item.quantity || 0), 0);
             const allGroupSelected = group.items.every(({ item }) => selectedItems.has(item.id));
             const someGroupSelected = group.items.some(({ item }) => selectedItems.has(item.id));
 
@@ -1436,7 +1471,7 @@ function QuoteBuilderTable({
 
             return (
               <React.Fragment key={group.key}>
-                {/* Type group summary row */}
+                {/* Type group summary row — total price only, no qty */}
                 <tr
                   className="border-b bg-muted/40 cursor-pointer hover:bg-muted/60 transition-colors"
                   onClick={() => toggleType(group.key)}
@@ -1446,7 +1481,6 @@ function QuoteBuilderTable({
                       checked={allGroupSelected}
                       className={someGroupSelected && !allGroupSelected ? "opacity-50" : ""}
                       onCheckedChange={() => {
-                        // Create a synthetic event for toggleTypeGroup
                         const syntheticEvent = { stopPropagation: () => {} } as React.MouseEvent;
                         toggleTypeGroup(group, syntheticEvent);
                       }}
@@ -1463,14 +1497,15 @@ function QuoteBuilderTable({
                         {group.supplier?.name || "Unknown"} — {group.type || "Items"}
                       </span>
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {itemCount} item{itemCount !== 1 ? "s" : ""}
+                        {itemCount} items
                       </Badge>
                     </div>
                   </td>
                   <td className="p-3 text-xs text-muted-foreground">
                     {group.items[0]?.item.description?.substring(0, 50)}{(group.items[0]?.item.description?.length || 0) > 50 ? "..." : ""}
                   </td>
-                  <td className="p-3 text-right font-medium">{totalQty}</td>
+                  <td className="p-3"></td>
+                  <td className="p-3"></td>
                   <td className="p-3 text-right font-mono text-muted-foreground">
                     ${group.totalCost.toFixed(2)}
                   </td>

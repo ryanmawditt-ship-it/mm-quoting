@@ -864,8 +864,17 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         group.groupTotal += item.sellPrice * item.quantity;
       }
 
-      // Determine if we should use grouped rendering
-      const useGroupedPdf = pdfTypeGroups.length > 1 || (pdfTypeGroups.length === 1 && pdfTypeGroups[0].type !== "");
+      // Only group types with 3+ items; types with <3 items render flat
+      const groupedPdfTypes: TypeGroup[] = [];
+      const flatPdfItems: typeof data.lineItems = [];
+      for (const group of pdfTypeGroups) {
+        if (group.type === "" || group.items.length < 3) {
+          flatPdfItems.push(...group.items);
+        } else {
+          groupedPdfTypes.push(group);
+        }
+      }
+      const useGroupedPdf = groupedPdfTypes.length > 0;
 
       let rowCounter = 0;
 
@@ -946,10 +955,17 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       };
 
       if (useGroupedPdf) {
-        // Grouped rendering: type summary header + detail rows
+        // Mixed rendering: flat items first, then grouped types (3+ items)
         let lineNum = 1;
-        for (const group of pdfTypeGroups) {
-          // Draw type group header row
+
+        // Render flat items first
+        for (const item of flatPdfItems) {
+          drawItemRow(item, lineNum++);
+        }
+
+        // Render grouped types
+        for (const group of groupedPdfTypes) {
+          // Draw type group header row — total price only, no qty
           const groupHeaderH = 24;
           ensurePageSpace(groupHeaderH);
 
@@ -971,9 +987,9 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
 
           // Item count
           doc.fontSize(7).font("Helvetica").fillColor(C.muted);
-          doc.text(`${group.items.length} item${group.items.length !== 1 ? "s" : ""}`, ML + 12, ghTextY + 10, { width: 100 });
+          doc.text(`${group.items.length} items`, ML + 12, ghTextY + 10, { width: 100 });
 
-          // Group total on the right
+          // Group total on the right (price only, no qty)
           doc.fontSize(8.5).font("Helvetica-Bold").fillColor(C.navy);
           const totalColX = ML + 8 + COL.num.w + COL.type.w + COL.code.w + COL.desc.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w;
           doc.text(`$${fmtMoney(group.groupTotal)}`, totalColX, ghTextY + 3, { width: COL.total.w, align: COL.total.align });

@@ -182,3 +182,6 @@
 - [x] Update customer quote PDF to group items by Type with summary header rows and type totals
 - [x] Add backend procedure to delete a supplier quote (cascade delete line items)
 - [x] Add delete button with confirmation dialog to supplier quote cards in ProjectDetailPage
+- [x] Only group types with 3+ items (1-2 items show flat, no collapsible group)
+- [x] Remove quantity from group summary rows (mixed items like clips shouldn't be summed)
+- [x] Show only total price on group header rows (no qty column)

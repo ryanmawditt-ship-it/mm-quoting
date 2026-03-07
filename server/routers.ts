@@ -27,6 +27,7 @@ import {
   updateLineItemMargin,
   updateLineItemMargins,
   deleteProject,
+  deleteSupplierQuote,
   getProjectSuppliers,
   addProjectSupplier,
   removeProjectSupplier,
@@ -172,6 +173,12 @@ export const appRouter = router({
     getByProject: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(({ input }) => getSupplierQuotesByProject(input.projectId)),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteSupplierQuote(input.id);
+        return { success: true };
+      }),
   }),
 
   // Line Items

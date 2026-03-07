@@ -180,3 +180,5 @@
 - [x] Build collapsible type groups in supplier quote card (summary row with bundled total, expand for detail)
 - [x] Build collapsible type groups in quote builder (same pattern)
 - [x] Update customer quote PDF to group items by Type with summary header rows and type totals
+- [x] Add backend procedure to delete a supplier quote (cascade delete line items)
+- [x] Add delete button with confirmation dialog to supplier quote cards in ProjectDetailPage

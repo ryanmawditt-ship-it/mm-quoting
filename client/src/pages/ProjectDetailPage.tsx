@@ -23,6 +23,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   Upload,
   FileText,
@@ -49,6 +59,7 @@ import {
   CircleCheck,
   ChevronDown,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -1068,11 +1079,22 @@ function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
 function SupplierQuoteCard({
   supplierQuote,
   suppliers,
+  onDeleted,
 }: {
   supplierQuote: any;
   suppliers: any[];
+  onDeleted?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const utils = trpc.useUtils();
+  const deleteQuoteMutation = trpc.supplierQuotes.delete.useMutation({
+    onSuccess: () => {
+      utils.supplierQuotes.getByProject.invalidate();
+      utils.projectSuppliers.list.invalidate();
+      onDeleted?.();
+    },
+  });
   const { data: lineItems } = trpc.lineItems.getBySupplierQuote.useQuery({
     supplierQuoteId: supplierQuote.id,
   });
@@ -1133,6 +1155,17 @@ function SupplierQuoteCard({
                 <Download className="h-4 w-4" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="sm">
               {expanded ? "Collapse" : "Expand"}
             </Button>
@@ -1142,6 +1175,34 @@ function SupplierQuoteCard({
         {expanded && lineItems && lineItems.length > 0 && (
           <SupplierQuoteTable lineItems={lineItems} />
         )}
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Supplier Quote</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this supplier quote from{" "}
+                <strong>{supplier?.name || "Unknown Supplier"}</strong>
+                {supplierQuote.quoteNumber && <> (#{supplierQuote.quoteNumber})</>}?
+                This will permanently remove the quote and all {lineItems?.length || 0} associated line items.
+                Any customer quote line items referencing these will also be removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => {
+                  deleteQuoteMutation.mutate({ id: supplierQuote.id });
+                }}
+                disabled={deleteQuoteMutation.isPending}
+              >
+                {deleteQuoteMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

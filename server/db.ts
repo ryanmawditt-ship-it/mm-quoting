@@ -220,6 +220,29 @@ export async function deleteProject(id: number) {
 }
 
 /**
+ * Delete a single supplier quote and its associated line items + customer quote line items
+ */
+export async function deleteSupplierQuote(supplierQuoteId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Get all line items for this supplier quote
+  const liList = await db.select({ id: lineItems.id }).from(lineItems).where(eq(lineItems.supplierQuoteId, supplierQuoteId));
+  const liIds = liList.map(li => li.id);
+
+  // Delete customer quote line items that reference these line items
+  if (liIds.length > 0) {
+    await db.delete(customerQuoteLineItems).where(inArray(customerQuoteLineItems.lineItemId, liIds));
+  }
+
+  // Delete line items
+  await db.delete(lineItems).where(eq(lineItems.supplierQuoteId, supplierQuoteId));
+
+  // Delete the supplier quote itself
+  await db.delete(supplierQuotes).where(eq(supplierQuotes.id, supplierQuoteId));
+}
+
+/**
  * Supplier Quotes
  */
 export async function createSupplierQuote(projectId: number, supplierId: number, quoteNumber?: string, quoteDate?: Date, pdfUrl?: string, quoteExpiry?: Date, validityDays?: number, deliveryNotes?: string) {

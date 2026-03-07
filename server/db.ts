@@ -144,14 +144,51 @@ export async function getSupplierById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/**
+ * Normalise a supplier name for matching: lowercase, strip common suffixes
+ * (PTY, LTD, GROUP, INC, CO, CORP, SPECIALISTS, AGENCIES), remove non-alphanumeric.
+ */
+export function normaliseSupplierName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\b(pty|ltd|group|inc|co|corp|specialists?|agencies|australia|aust|au)\b/gi, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
 export async function getOrCreateSupplierByName(userId: number, name: string, contact?: string, email?: string, phone?: string): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  // Try to find existing supplier by name (case-insensitive)
+
+  const normInput = normaliseSupplierName(name);
+
+  // Fetch all suppliers for this user and match by normalised name
   const existing = await db.select().from(suppliers).where(eq(suppliers.userId, userId));
-  const match = existing.find(s => s.name.toLowerCase().trim() === name.toLowerCase().trim());
-  if (match) return match.id;
-  // Create new supplier
+
+  // 1. Try exact normalised match
+  let match = existing.find(s => normaliseSupplierName(s.name) === normInput);
+
+  // 2. Try "contains" match (one name is a substring of the other after normalisation)
+  if (!match) {
+    match = existing.find(s => {
+      const normExisting = normaliseSupplierName(s.name);
+      return normExisting.includes(normInput) || normInput.includes(normExisting);
+    });
+  }
+
+  if (match) {
+    // Update contact details if the existing record is missing them and we have new ones
+    const updates: Record<string, string> = {};
+    if (!match.contact && contact) updates.contact = contact;
+    if (!match.email && email) updates.email = email;
+    if (!match.phone && phone) updates.phone = phone;
+    if (Object.keys(updates).length > 0) {
+      await db.update(suppliers).set(updates).where(eq(suppliers.id, match.id));
+    }
+    return match.id;
+  }
+
+  // Create new supplier only if no match found
   const result = await db.insert(suppliers).values({ userId, name, contact, email, phone, defaultMarkupPercent: 0 });
   return result[0].insertId;
 }

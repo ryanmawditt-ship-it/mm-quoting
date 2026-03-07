@@ -1,0 +1,626 @@
+{
+  "query": "SELECT id, name, contact, email, phone, defaultMarkupPercent FROM suppliers ORDER BY LOWER(name), id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, name, contact, email, phone, defaultMarkupPercent FROM suppliers ORDER BY LOWER(name), id;",
+  "rows": [
+    {
+      "id": "60016",
+      "name": "Brand New Supplier",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60020",
+      "name": "Brand New Supplier",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "1",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "3",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "5",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "7",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "9",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "30001",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "30003",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "30006",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "30008",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "30010",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "30012",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60002",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60004",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60006",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60008",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60010",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60013",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60017",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60021",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90001",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90005",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90008",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90011",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90014",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90017",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90020",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90023",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90026",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "90029",
+      "name": "Everlite Lighting Group",
+      "contact": "Sarah Johnson",
+      "email": "quotes@everlite.com.au",
+      "phone": "1300 123 456",
+      "defaultMarkupPercent": "25"
+    },
+    {
+      "id": "60001",
+      "name": "EVERLITE LIGHTING GROUP PTY LTD",
+      "contact": "NULL",
+      "email": "accounts@everlite.com.au",
+      "phone": "1300 998 982",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30005",
+      "name": "EVERLITE Lighting Specialists",
+      "contact": "Jon Smith",
+      "email": "accounts@everlite.com.au",
+      "phone": "1300 998 982",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90004",
+      "name": "LUXSON ILLUMINATION",
+      "contact": "Luxson Sales Team",
+      "email": "sales@luxsonillumination.com.au",
+      "phone": "07 3423 0807",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "2",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "4",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "6",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "8",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "10",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30002",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30004",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30007",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30009",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30011",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "30013",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60003",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60005",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60007",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60009",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60011",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60014",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60018",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60022",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90002",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90006",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90009",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90012",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90015",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90018",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90021",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90024",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90027",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90030",
+      "name": "Test Supplier No Markup",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60012",
+      "name": "Tracked Supplier A",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60015",
+      "name": "Tracked Supplier A",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60019",
+      "name": "Tracked Supplier A",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "60023",
+      "name": "TrackSup-1772849523027",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90003",
+      "name": "TrackSup-1772877330529",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90007",
+      "name": "TrackSup-1772878066850",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90010",
+      "name": "TrackSup-1772878637619",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90013",
+      "name": "TrackSup-1772879435896",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90016",
+      "name": "TrackSup-1772879895470",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90019",
+      "name": "TrackSup-1772880412174",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90022",
+      "name": "TrackSup-1772880792947",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90025",
+      "name": "TrackSup-1772882103557",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90028",
+      "name": "TrackSup-1772882922830",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    },
+    {
+      "id": "90031",
+      "name": "TrackSup-1772883461287",
+      "contact": "NULL",
+      "email": "NULL",
+      "phone": "NULL",
+      "defaultMarkupPercent": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcontact\temail\tphone\tdefaultMarkupPercent\n60016\tBrand New Supplier\tNULL\tNULL\tNULL\t0\n60020\tBrand New Supplier\tNULL\tNULL\tNULL\t0\n1\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n3\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n5\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n7\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n9\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n30001\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n30003\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n30006\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n30008\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n30010\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n30012\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60002\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60004\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60006\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60008\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60010\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60013\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60017\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60021\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90001\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90005\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90008\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90011\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90014\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90017\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90020\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90023\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90026\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n90029\tEverlite Lighting Group\tSarah Johnson\tquotes@everlite.com.au\t1300 123 456\t25\n60001\tEVERLITE LIGHTING GROUP PTY LTD\tNULL\taccounts@everlite.com.au\t1300 998 982\t0\n30005\tEVERLITE Lighting Specialists\tJon Smith\taccounts@everlite.com.au\t1300 998 982\t0\n90004\tLUXSON ILLUMINATION\tLuxson Sales Team\tsales@luxsonillumination.com.au\t07 3423 0807\t0\n2\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n4\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n6\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n8\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n10\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n30002\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n30004\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n30007\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n30009\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n30011\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n30013\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60003\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60005\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60007\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60009\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60011\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60014\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60018\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60022\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90002\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90006\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90009\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90012\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90015\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90018\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90021\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90024\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90027\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n90030\tTest Supplier No Markup\tNULL\tNULL\tNULL\t0\n60012\tTracked Supplier A\tNULL\tNULL\tNULL\t0\n60015\tTracked Supplier A\tNULL\tNULL\tNULL\t0\n60019\tTracked Supplier A\tNULL\tNULL\tNULL\t0\n60023\tTrackSup-1772849523027\tNULL\tNULL\tNULL\t0\n90003\tTrackSup-1772877330529\tNULL\tNULL\tNULL\t0\n90007\tTrackSup-1772878066850\tNULL\tNULL\tNULL\t0\n90010\tTrackSup-1772878637619\tNULL\tNULL\tNULL\t0\n90013\tTrackSup-1772879435896\tNULL\tNULL\tNULL\t0\n90016\tTrackSup-1772879895470\tNULL\tNULL\tNULL\t0\n90019\tTrackSup-1772880412174\tNULL\tNULL\tNULL\t0\n90022\tTrackSup-1772880792947\tNULL\tNULL\tNULL\t0\n90025\tTrackSup-1772882103557\tNULL\tNULL\tNULL\t0\n90028\tTrackSup-1772882922830\tNULL\tNULL\tNULL\t0\n90031\tTrackSup-1772883461287\tNULL\tNULL\tNULL\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1528
+}

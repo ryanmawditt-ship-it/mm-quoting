@@ -194,3 +194,7 @@
 - [x] Make reorder section more prominent or integrate it into the main flow
 - [x] Fix: "Rendered more hooks than during previous render" error on Step 2 of quote builder
 - [x] Fix: Trash2 is not defined error in ProjectDetailPage
+- [x] Audit and identify duplicate suppliers in the database
+- [x] Merge duplicate suppliers: consolidate quotes, line items, and project_suppliers into one canonical supplier
+- [x] Improve supplier name matching logic to prevent future duplicates (fuzzy/normalised matching)
+- [ ] Add supplier edit/delete functionality on the Suppliers page

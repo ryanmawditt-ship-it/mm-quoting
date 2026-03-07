@@ -497,12 +497,11 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         lt:    { w: 32,  align: "center" as const },
         qty:   { w: 32,  align: "center" as const },
         uom:   { w: 32,  align: "center" as const },
-        price: { w: 62,  align: "right"  as const },
-        gst:   { w: 52,  align: "right"  as const },
-        total: { w: 68,  align: "right"  as const },
+        price: { w: 68,  align: "right"  as const },
+        total: { w: 78,  align: "right"  as const },
       };
       // Remaining space distributed to desc
-      const usedW = COL.num.w + COL.code.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w + COL.gst.w + COL.total.w;
+      const usedW = COL.num.w + COL.code.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w + COL.total.w;
       COL.desc.w = CW - usedW - 16; // 16 for padding
 
       const MIN_ROW_H = 22;
@@ -541,8 +540,6 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         x += COL.uom.w;
         doc.text("Unit Price",  x, y + 8, { width: COL.price.w, align: COL.price.align });
         x += COL.price.w;
-        doc.text("GST",         x, y + 8, { width: COL.gst.w,   align: COL.gst.align });
-        x += COL.gst.w;
         doc.text("Line Total",  x, y + 8, { width: COL.total.w, align: COL.total.align });
 
         return y + HDR_H;
@@ -744,12 +741,8 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         doc.text(`$${fmtMoney(item.sellPrice)}`, x, centreY, { width: COL.price.w, align: COL.price.align, lineBreak: false });
         x += COL.price.w;
 
-        doc.fillColor(C.muted);
-        doc.text(`$${fmtMoney(lineGst)}`, x, centreY, { width: COL.gst.w, align: COL.gst.align, lineBreak: false });
-        x += COL.gst.w;
-
         doc.font("Helvetica-Bold").fillColor(C.dark);
-        doc.text(`$${fmtMoney(lineIncl)}`, x, centreY, { width: COL.total.w, align: COL.total.align, lineBreak: false });
+        doc.text(`$${fmtMoney(lineExcl)}`, x, centreY, { width: COL.total.w, align: COL.total.align, lineBreak: false });
 
         tableY += rowH;
       }

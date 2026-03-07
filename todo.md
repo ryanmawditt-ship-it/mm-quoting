@@ -139,3 +139,4 @@
 - [x] Update AI extraction to read lead times / delivery times from supplier quotes
 - [x] Ensure lead time data is stored and displayed in the quote builder and PDF
 - [x] Fix: Supplier quote PDF extraction is failing after recent changes (JSON schema structure was broken)
+- [x] Remove per-line GST column from customer PDF — show GST only as a total at the bottom

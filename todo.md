@@ -189,3 +189,6 @@
 - [x] Add drag-to-reorder line items in quote builder to control sequence on customer quote
 - [x] Add editable quantity field in quote builder so user can override supplier-quoted quantities
 - [x] Ensure reordered sequence is preserved when generating customer quote PDF
+- [x] Improve quote builder UX: make editable Qty and drag-to-reorder more discoverable
+- [x] Move Qty editing into the main selection table (not hidden behind horizontal scroll)
+- [x] Make reorder section more prominent or integrate it into the main flow

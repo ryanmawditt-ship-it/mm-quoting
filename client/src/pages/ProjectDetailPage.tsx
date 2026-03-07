@@ -61,6 +61,7 @@ import {
   ChevronRight,
   Trash2,
   GripVertical,
+  ArrowRight,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -1303,6 +1304,103 @@ function SortableRow({ id, lineNum, itemType, description, quantity, sellTotal }
   );
 }
 
+function SortableReviewRow({ id, lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onRemove }: {
+  id: number;
+  lineNum: number;
+  itemType: string;
+  description: string;
+  productCode: string;
+  quantity: number;
+  costPrice: number;
+  margin: number;
+  sellPrice: number;
+  lineTotal: number;
+  onQuantityChange: (qty: number) => void;
+  onMarginChange: (margin: number) => void;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={`border-b last:border-0 ${
+        isDragging ? "bg-primary/10 shadow-lg" : "hover:bg-muted/30"
+      }`}
+    >
+      <td className="p-2 text-center">
+        <button
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      </td>
+      <td className="p-2 text-center">
+        <span className="font-mono text-xs font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5">
+          {lineNum}
+        </span>
+      </td>
+      <td className="p-2">
+        {itemType && <Badge variant="outline" className="text-xs">{itemType}</Badge>}
+      </td>
+      <td className="p-2 text-xs max-w-[250px]">
+        <div className="truncate" title={description}>{description}</div>
+        {productCode && <div className="text-[10px] text-muted-foreground font-mono">{productCode}</div>}
+      </td>
+      <td className="p-2 text-right">
+        <Input
+          type="number"
+          className="w-20 h-7 text-right text-xs"
+          value={quantity}
+          onChange={(e) => onQuantityChange(parseInt(e.target.value) || 0)}
+          min={0}
+        />
+      </td>
+      <td className="p-2 text-right font-mono text-xs text-muted-foreground">
+        ${costPrice.toFixed(2)}
+      </td>
+      <td className="p-2 text-right">
+        <Input
+          type="number"
+          className="w-20 h-7 text-right text-xs"
+          value={margin}
+          onChange={(e) => onMarginChange(parseInt(e.target.value) || 0)}
+          min={0}
+          max={99}
+        />
+      </td>
+      <td className="p-2 text-right font-mono text-xs">
+        ${sellPrice.toFixed(2)}
+      </td>
+      <td className="p-2 text-right font-mono text-xs font-medium">
+        ${lineTotal.toFixed(2)}
+      </td>
+      <td className="p-2 text-center">
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onRemove}>
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
 function ReorderList({
   orderedItemIds,
   selectedItems,
@@ -2034,264 +2132,402 @@ function QuoteBuilder({
     }
   };
 
+  const [step, setStep] = useState<1 | 2>(1);
+
+  // Step 2: ordered selected items for the review table
+  const orderedSelectedItems = useMemo(() => {
+    const finalOrder = orderedItemIds.filter(id => selectedItems.has(id));
+    selectedItems.forEach((_, id) => {
+      if (!finalOrder.includes(id)) finalOrder.push(id);
+    });
+    return finalOrder.map(id => {
+      const data = selectedItems.get(id)!;
+      const lineItem = allLineItems.find(({ item }) => item.id === id);
+      return { id, data, lineItem };
+    }).filter(x => x.data);
+  }, [orderedItemIds, selectedItems, allLineItems]);
+
   return (
     <div className="space-y-6">
-      {/* Quote Details */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label>Job Title</Label>
-          <Input
-            value={jobTitle}
-            onChange={(e) => setJobTitle(e.target.value)}
-            placeholder="Project name / job title"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Salesperson</Label>
-          <Select value={salespersonId} onValueChange={setSalespersonId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select salesperson..." />
-            </SelectTrigger>
-            <SelectContent>
-              {salespersons.map((sp) => (
-                <SelectItem key={sp.id} value={sp.id.toString()}>
-                  {sp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Valid For (days)</Label>
-          <Input
-            type="number"
-            value={validDays}
-            onChange={(e) => setValidDays(parseInt(e.target.value) || 28)}
-            min={1}
-          />
-        </div>
+      {/* Step Indicator */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setStep(1)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            step === 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold">1</span>
+          Select Items & Details
+        </button>
+        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+        <button
+          onClick={() => {
+            if (selectedItems.size === 0) {
+              toast.error("Please select at least one line item first");
+              return;
+            }
+            setStep(2);
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            step === 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold">2</span>
+          Review, Reorder & Generate
+          {selectedItems.size > 0 && (
+            <Badge variant="secondary" className="ml-1 text-xs">{selectedItems.size}</Badge>
+          )}
+        </button>
       </div>
 
-      <Separator />
+      {step === 1 && (
+        <>
+          {/* Quote Details */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Job Title</Label>
+              <Input
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="Project name / job title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Salesperson</Label>
+              <Select value={salespersonId} onValueChange={setSalespersonId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select salesperson..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {salespersons.map((sp) => (
+                    <SelectItem key={sp.id} value={sp.id.toString()}>
+                      {sp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Valid For (days)</Label>
+              <Input
+                type="number"
+                value={validDays}
+                onChange={(e) => setValidDays(parseInt(e.target.value) || 28)}
+                min={1}
+              />
+            </div>
+          </div>
 
-      {/* Customer Details — Quote To / Deliver To */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Quote To */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Quote To</h3>
-          </div>
-          <div className="space-y-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Company / Customer Name</Label>
-              <Input
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Customer or company name"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Contact Person</Label>
-              <Input
-                value={customerContact}
-                onChange={(e) => setCustomerContact(e.target.value)}
-                placeholder="Attn: Contact name"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Email</Label>
-                <Input
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  placeholder="email@example.com"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Phone</Label>
-                <Input
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="Phone number"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Address</Label>
-              <Input
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                placeholder="Street address, city, state, postcode"
-              />
-            </div>
-          </div>
-        </div>
+          <Separator />
 
-        {/* Deliver To */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Deliver To</h3>
+          {/* Customer Details — Quote To / Deliver To */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Quote To */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">Quote To</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Company / Customer Name</Label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Customer or company name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Contact Person</Label>
+                  <Input
+                    value={customerContact}
+                    onChange={(e) => setCustomerContact(e.target.value)}
+                    placeholder="Attn: Contact name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <Input
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <Input
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="Phone number"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Address</Label>
+                  <Input
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    placeholder="Street address, city, state, postcode"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Deliver To */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">Deliver To</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Delivery Name</Label>
+                  <Input
+                    value={deliverToName}
+                    onChange={(e) => setDeliverToName(e.target.value)}
+                    placeholder="Delivery recipient name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Delivery Address</Label>
+                  <Textarea
+                    value={deliverToAddress}
+                    onChange={(e) => setDeliverToAddress(e.target.value)}
+                    placeholder="Delivery address"
+                    rows={3}
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
+                  onClick={() => {
+                    setDeliverToName(customerName);
+                    setDeliverToAddress(customerAddress);
+                  }}
+                >
+                  Copy from Quote To
+                </Button>
+              </div>
+            </div>
           </div>
+
+          <Separator />
+
+          {/* Special Instructions / Notes */}
           <div className="space-y-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Delivery Name</Label>
-              <Input
-                value={deliverToName}
-                onChange={(e) => setDeliverToName(e.target.value)}
-                placeholder="Delivery recipient name"
-              />
+            <div className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-sm">Special Instructions & Notes</h3>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Delivery Address</Label>
-              <Textarea
-                value={deliverToAddress}
-                onChange={(e) => setDeliverToAddress(e.target.value)}
-                placeholder="Delivery address"
-                rows={3}
-              />
+            <p className="text-xs text-muted-foreground">
+              Add delivery instructions, additional costs, exclusions, or any other notes for the customer. This will appear on the last page of the quote PDF.
+            </p>
+            <Textarea
+              value={specialInstructions}
+              onChange={(e) => setSpecialInstructions(e.target.value)}
+              placeholder={"e.g.\n- Delivery to site: $500 + GST\n- Crane hire not included\n- Items subject to availability\n- Please allow 4-6 weeks for delivery"}
+              rows={5}
+            />
+          </div>
+
+          <Separator />
+
+          {/* Global Margin Control */}
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+            <Percent className="h-4 w-4 text-muted-foreground" />
+            <Label className="shrink-0">Global Margin:</Label>
+            <Input
+              type="number"
+              className="w-24"
+              value={globalMargin}
+              onChange={(e) => setGlobalMargin(parseInt(e.target.value) || 0)}
+              min={0}
+              max={99}
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+            <span className="text-xs text-muted-foreground">(Sell = Cost &divide; {(1 - globalMargin / 100).toFixed(2)})</span>
+            <Button variant="outline" size="sm" onClick={applyGlobalMargin}>
+              Apply to All Items
+            </Button>
+          </div>
+
+          {/* Line Items Selection */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">
+                Select Line Items ({selectedItems.size} selected)
+              </h3>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={selectAll}>
+                  Select All
+                </Button>
+                <Button variant="outline" size="sm" onClick={deselectAll}>
+                  Deselect All
+                </Button>
+              </div>
             </div>
+
+            <QuoteBuilderTable
+              allLineItems={allLineItems}
+              selectedItems={selectedItems}
+              toggleItem={toggleItem}
+              updateItemMargin={updateItemMargin}
+              updateItemQuantity={updateItemQuantity}
+              saveMarginToDb={saveMarginToDb}
+              setSelectedItems={setSelectedItems}
+              globalMargin={globalMargin}
+            />
+          </div>
+
+          {/* Step 1 Actions */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
             <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground"
               onClick={() => {
-                setDeliverToName(customerName);
-                setDeliverToAddress(customerAddress);
+                if (selectedItems.size === 0) {
+                  toast.error("Please select at least one line item");
+                  return;
+                }
+                setStep(2);
               }}
             >
-              Copy from Quote To
+              Next: Review & Reorder
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Special Instructions / Notes */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <StickyNote className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold text-sm">Special Instructions & Notes</h3>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Add delivery instructions, additional costs, exclusions, or any other notes for the customer. This will appear on the last page of the quote PDF.
-        </p>
-        <Textarea
-          value={specialInstructions}
-          onChange={(e) => setSpecialInstructions(e.target.value)}
-          placeholder={"e.g.\n- Delivery to site: $500 + GST\n- Crane hire not included\n- Items subject to availability\n- Please allow 4-6 weeks for delivery"}
-          rows={5}
-        />
-      </div>
-
-      <Separator />
-
-      {/* Global Margin Control — always visible */}
-      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-        <Percent className="h-4 w-4 text-muted-foreground" />
-        <Label className="shrink-0">Global Margin:</Label>
-        <Input
-          type="number"
-          className="w-24"
-          value={globalMargin}
-          onChange={(e) => setGlobalMargin(parseInt(e.target.value) || 0)}
-          min={0}
-          max={99}
-        />
-        <span className="text-sm text-muted-foreground">%</span>
-        <span className="text-xs text-muted-foreground">(Sell = Cost &divide; {(1 - globalMargin / 100).toFixed(2)})</span>
-        <Button variant="outline" size="sm" onClick={applyGlobalMargin}>
-          Apply to All Items
-        </Button>
-      </div>
-
-      {/* Line Items Selection */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">
-            Select Line Items ({selectedItems.size} selected)
-          </h3>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={selectAll}>
-              Select All
-            </Button>
-            <Button variant="outline" size="sm" onClick={deselectAll}>
-              Deselect All
-            </Button>
-          </div>
-        </div>
-
-        <QuoteBuilderTable
-          allLineItems={allLineItems}
-          selectedItems={selectedItems}
-          toggleItem={toggleItem}
-          updateItemMargin={updateItemMargin}
-          updateItemQuantity={updateItemQuantity}
-          saveMarginToDb={saveMarginToDb}
-          setSelectedItems={setSelectedItems}
-          globalMargin={globalMargin}
-        />
-      </div>
-
-      {/* Reorder Selected Items */}
-      {orderedItemIds.filter(id => selectedItems.has(id)).length > 1 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-            <h3 className="font-semibold text-sm">Reorder Quote Lines</h3>
-            <span className="text-xs text-muted-foreground">(Drag to reorder how items appear on the customer quote)</span>
-          </div>
-          <ReorderList
-            orderedItemIds={orderedItemIds.filter(id => selectedItems.has(id))}
-            selectedItems={selectedItems}
-            allLineItems={allLineItems}
-            onReorder={(newOrder) => setOrderedItemIds(newOrder)}
-          />
-        </div>
+        </>
       )}
 
-      {/* Totals */}
-      <div className="bg-muted/50 rounded-lg p-4">
-        <div className="flex justify-end">
-          <div className="space-y-1 text-sm w-64">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Excl. GST:</span>
-              <span className="font-mono font-semibold">${totals.totalExclGst.toFixed(2)}</span>
+      {step === 2 && (
+        <>
+          {/* Review & Reorder Table — editable Qty, Margin, draggable rows */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Review & Reorder ({orderedSelectedItems.length} items)</h3>
+              <p className="text-xs text-muted-foreground">Drag rows to reorder. Edit Qty and Margin directly.</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">GST (10%):</span>
-              <span className="font-mono">${totals.gst.toFixed(2)}</span>
-            </div>
-            <Separator className="my-2" />
-            <div className="flex justify-between text-base">
-              <span className="font-semibold">Total Incl. GST:</span>
-              <span className="font-mono font-bold">${totals.totalInclGst.toFixed(2)}</span>
+
+            <DndContext
+              sensors={useSensors(
+                useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+                useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+              )}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => {
+                const { active, over } = event;
+                if (over && active.id !== over.id) {
+                  const currentOrder = orderedItemIds.filter(id => selectedItems.has(id));
+                  const oldIndex = currentOrder.indexOf(active.id as number);
+                  const newIndex = currentOrder.indexOf(over.id as number);
+                  const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
+                  // Preserve unselected items in orderedItemIds
+                  const unselected = orderedItemIds.filter(id => !selectedItems.has(id));
+                  setOrderedItemIds([...newOrder, ...unselected]);
+                }
+              }}
+            >
+              <SortableContext
+                items={orderedSelectedItems.map(x => x.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-3 text-left w-10"></th>
+                        <th className="p-3 text-center font-medium text-muted-foreground w-10">#</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground w-24">Qty</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground">Sell</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
+                        <th className="p-3 text-center font-medium text-muted-foreground w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orderedSelectedItems.map(({ id: itemId, data, lineItem }, idx) => {
+                        const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
+                        return (
+                          <SortableReviewRow
+                            key={itemId}
+                            id={itemId}
+                            lineNum={idx + 1}
+                            itemType={data.itemType}
+                            description={lineItem?.item?.description || data.description}
+                            productCode={lineItem?.item?.productCode || ""}
+                            quantity={data.quantity}
+                            costPrice={data.costPrice}
+                            margin={data.margin}
+                            sellPrice={sellPrice}
+                            lineTotal={sellPrice * data.quantity}
+                            onQuantityChange={(qty) => updateItemQuantity(itemId, qty)}
+                            onMarginChange={(margin) => updateItemMargin(itemId, margin)}
+                            onRemove={() => {
+                              const newSelected = new Map(selectedItems);
+                              newSelected.delete(itemId);
+                              setSelectedItems(newSelected);
+                              setOrderedItemIds(prev => prev.filter(id => id !== itemId));
+                            }}
+                          />
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          {/* Totals */}
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="flex justify-end">
+              <div className="space-y-1 text-sm w-64">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Excl. GST:</span>
+                  <span className="font-mono font-semibold">${totals.totalExclGst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">GST (10%):</span>
+                  <span className="font-mono">${totals.gst.toFixed(2)}</span>
+                </div>
+                <Separator className="my-2" />
+                <div className="flex justify-between text-base">
+                  <span className="font-semibold">Total Incl. GST:</span>
+                  <span className="font-mono font-bold">${totals.totalInclGst.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button onClick={handleGenerate} disabled={generating || selectedItems.size === 0}>
-          {generating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Quote PDF
-            </>
-          )}
-        </Button>
-      </div>
+          {/* Step 2 Actions */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep(1)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Selection
+            </Button>
+            <Button onClick={handleGenerate} disabled={generating || selectedItems.size === 0}>
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Generate Quote PDF
+                </>
+              )}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

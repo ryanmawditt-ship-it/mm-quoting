@@ -47,8 +47,10 @@ import {
   Package,
   CircleDashed,
   CircleCheck,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
-import { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -849,6 +851,219 @@ export default function ProjectDetailPage() {
   );
 }
 
+// Collapsible type-grouped table for supplier quote line items
+function SupplierQuoteTable({ lineItems }: { lineItems: any[] }) {
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
+
+  // Group items by type
+  const typeGroups = useMemo(() => {
+    const groups: { type: string; items: any[]; total: number; firstComments: string | null }[] = [];
+    const groupMap = new Map<string, { items: any[]; total: number; firstComments: string | null }>();
+
+    for (const item of lineItems) {
+      const typeKey = item.type || "UNGROUPED";
+      if (!groupMap.has(typeKey)) {
+        const entry = { items: [], total: 0, firstComments: null as string | null };
+        groupMap.set(typeKey, entry);
+        groups.push({ type: typeKey, ...entry });
+      }
+      const group = groupMap.get(typeKey)!;
+      group.items.push(item);
+      const cost = parseFloat(item.costPrice) || 0;
+      group.total += cost * (item.quantity || 0);
+      // Only capture comments from the first item of the group (typeNotes)
+      if (!group.firstComments && item.comments) {
+        group.firstComments = item.comments;
+      }
+    }
+
+    // Update the groups array references
+    for (const g of groups) {
+      const data = groupMap.get(g.type)!;
+      g.items = data.items;
+      g.total = data.total;
+      g.firstComments = data.firstComments;
+    }
+
+    return groups;
+  }, [lineItems]);
+
+  // If only one group (UNGROUPED) or no types, show flat list
+  const hasTypeGroups = typeGroups.length > 1 || (typeGroups.length === 1 && typeGroups[0].type !== "UNGROUPED");
+
+  const toggleType = (type: string) => {
+    setExpandedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const grandTotal = lineItems.reduce(
+    (sum, item) => sum + parseFloat(item.costPrice) * item.quantity,
+    0
+  );
+
+  if (!hasTypeGroups) {
+    // Flat table for items without meaningful type groups
+    return (
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left">
+              <th className="pb-2 pr-3 font-medium text-muted-foreground">#</th>
+              <th className="pb-2 pr-3 font-medium text-muted-foreground">Type</th>
+              <th className="pb-2 pr-3 font-medium text-muted-foreground">Product Code</th>
+              <th className="pb-2 pr-3 font-medium text-muted-foreground">Description</th>
+              <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Qty</th>
+              <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Cost</th>
+              <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Sub Total</th>
+              <th className="pb-2 font-medium text-muted-foreground text-right">LT</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.map((item, idx) => {
+              const cost = parseFloat(item.costPrice);
+              return (
+                <tr key={item.id} className={`border-b last:border-0 ${item.isBundled ? "bg-muted/30" : ""} ${item.quantity === 0 ? "opacity-60" : ""}`}>
+                  <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
+                  <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
+                  <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
+                  <td className="py-2 pr-3 max-w-sm text-xs">
+                    <span className="block">{item.description}</span>
+                    {item.comments && (
+                      <div className="mt-1 p-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-[10px] text-amber-800 dark:text-amber-200 whitespace-pre-line">
+                        {item.comments}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 text-right">{item.quantity}</td>
+                  <td className="py-2 pr-3 text-right font-mono">
+                    {item.isBundled ? <span className="text-muted-foreground text-xs">incl.</span> : `$${cost.toFixed(2)}`}
+                  </td>
+                  <td className="py-2 pr-3 text-right font-mono">
+                    {item.isBundled ? <span className="text-muted-foreground">\u2014</span> : `$${(cost * item.quantity).toFixed(2)}`}
+                  </td>
+                  <td className="py-2 text-right text-muted-foreground">{item.leadTimeDays || "-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="font-semibold">
+              <td colSpan={6} className="pt-3 text-right">Total:</td>
+              <td className="pt-3 text-right font-mono">${grandTotal.toFixed(2)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    );
+  }
+
+  // Grouped table with collapsible type sections
+  return (
+    <div className="mt-4 overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left">
+            <th className="pb-2 pr-3 font-medium text-muted-foreground w-8"></th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground">Type</th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground">Items</th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground">Description</th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Qty</th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Cost</th>
+            <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Sub Total</th>
+            <th className="pb-2 font-medium text-muted-foreground text-right">LT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {typeGroups.map((group) => {
+            const isExpanded = expandedTypes.has(group.type);
+            const itemCount = group.items.length;
+            const totalQty = group.items.reduce((s, i) => s + (i.quantity || 0), 0);
+            const maxLT = Math.max(...group.items.map((i) => i.leadTimeDays || 0));
+            return (
+              <React.Fragment key={group.type}>
+                {/* Summary row — always visible */}
+                <tr
+                  className="border-b bg-muted/40 cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => toggleType(group.type)}
+                >
+                  <td className="py-2.5 pr-2 text-center">
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground inline" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground inline" />
+                    )}
+                  </td>
+                  <td className="py-2.5 pr-3 font-semibold text-sm">{group.type}</td>
+                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">{itemCount} item{itemCount !== 1 ? "s" : ""}</td>
+                  <td className="py-2.5 pr-3 text-xs text-muted-foreground">
+                    {group.items[0]?.description?.substring(0, 60)}{group.items[0]?.description?.length > 60 ? "..." : ""}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right font-medium">{totalQty}</td>
+                  <td className="py-2.5 pr-3 text-right"></td>
+                  <td className="py-2.5 pr-3 text-right font-mono font-semibold">${group.total.toFixed(2)}</td>
+                  <td className="py-2.5 text-right text-muted-foreground">{maxLT > 0 ? `${maxLT}d` : "-"}</td>
+                </tr>
+                {/* Type notes — shown under summary row when expanded, only once per type */}
+                {isExpanded && group.firstComments && (
+                  <tr className="border-b">
+                    <td></td>
+                    <td colSpan={7} className="py-2 px-3">
+                      <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-200 whitespace-pre-line">
+                        {group.firstComments}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {/* Expanded detail rows */}
+                {isExpanded &&
+                  group.items.map((item, idx) => {
+                    const cost = parseFloat(item.costPrice);
+                    return (
+                      <tr key={item.id} className={`border-b last:border-0 ${item.isBundled ? "bg-muted/20" : ""} ${item.quantity === 0 ? "opacity-60" : ""}`}>
+                        <td className="py-1.5 pr-2"></td>
+                        <td className="py-1.5 pr-3 text-xs text-muted-foreground">{idx + 1}</td>
+                        <td className="py-1.5 pr-3 font-mono text-xs">{item.productCode}</td>
+                        <td className="py-1.5 pr-3 max-w-sm text-xs">
+                          <span className="block">{item.description}</span>
+                          {/* Show per-item comments only (not typeNotes, those are on the group header) */}
+                          {item.comments && !group.firstComments?.includes(item.comments) && idx > 0 && (
+                            <div className="mt-1 p-1 bg-muted/50 rounded text-[10px] text-muted-foreground whitespace-pre-line">
+                              {item.comments}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-3 text-right text-xs">{item.quantity}</td>
+                        <td className="py-1.5 pr-3 text-right font-mono text-xs">
+                          {item.isBundled ? <span className="text-muted-foreground">incl.</span> : `$${cost.toFixed(2)}`}
+                        </td>
+                        <td className="py-1.5 pr-3 text-right font-mono text-xs">
+                          {item.isBundled ? <span className="text-muted-foreground">\u2014</span> : `$${(cost * item.quantity).toFixed(2)}`}
+                        </td>
+                        <td className="py-1.5 text-right text-muted-foreground text-xs">{item.leadTimeDays || "-"}</td>
+                      </tr>
+                    );
+                  })}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="font-semibold">
+            <td colSpan={6} className="pt-3 text-right">Total:</td>
+            <td className="pt-3 text-right font-mono">${grandTotal.toFixed(2)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
 // Supplier Quote Card with expandable line items
 function SupplierQuoteCard({
   supplierQuote,
@@ -925,75 +1140,367 @@ function SupplierQuoteCard({
         </div>
 
         {expanded && lineItems && lineItems.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground">#</th>
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground">Type</th>
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground">Product Code</th>
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground">Description</th>
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Qty</th>
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Cost</th>
-                  <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Sub Total</th>
-                  <th className="pb-2 font-medium text-muted-foreground text-right">LT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.map((item, idx) => {
-                  const cost = parseFloat(item.costPrice);
-                  return (
-                    <tr key={item.id} className={`border-b last:border-0 ${(item as any).isBundled ? "bg-muted/30" : ""} ${item.quantity === 0 ? "opacity-60" : ""}`}>
-                      <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
-                      <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
-                      <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
-                      <td className="py-2 pr-3 max-w-sm text-xs">
-                        <span className="block">{item.description}</span>
-                        {(item as any).comments && (
-                          <div className="mt-1 p-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-[10px] text-amber-800 dark:text-amber-200 whitespace-pre-line">
-                            {(item as any).comments}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-right">{item.quantity}</td>
-                      <td className="py-2 pr-3 text-right font-mono">
-                        {(item as any).isBundled ? (
-                          <span className="text-muted-foreground text-xs">incl.</span>
-                        ) : (
-                          `$${cost.toFixed(2)}`
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-right font-mono">
-                        {(item as any).isBundled ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : (
-                          `$${(cost * item.quantity).toFixed(2)}`
-                        )}
-                      </td>
-                      <td className="py-2 text-right text-muted-foreground">
-                        {item.leadTimeDays || "-"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="font-semibold">
-                  <td colSpan={6} className="pt-3 text-right">Total:</td>
-                  <td className="pt-3 text-right font-mono">
-                    $
-                    {lineItems
-                      .reduce((sum, item) => sum + parseFloat(item.costPrice) * item.quantity, 0)
-                      .toFixed(2)}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <SupplierQuoteTable lineItems={lineItems} />
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Quote Builder Table with collapsible type groups
+function QuoteBuilderTable({
+  allLineItems,
+  selectedItems,
+  toggleItem,
+  updateItemMargin,
+  saveMarginToDb,
+  setSelectedItems,
+  globalMargin,
+}: {
+  allLineItems: Array<{ item: any; supplier: any; supplierQuote: any }>;
+  selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>;
+  toggleItem: (itemId: number, item: any, supplier: any) => void;
+  updateItemMargin: (itemId: number, margin: number) => void;
+  saveMarginToDb: (itemId: number, margin: number) => void;
+  setSelectedItems: React.Dispatch<React.SetStateAction<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>>;
+  globalMargin: number;
+}) {
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
+
+  // Group items by type (supplier + type combination for uniqueness)
+  const typeGroups = useMemo(() => {
+    const groups: Array<{
+      key: string;
+      type: string;
+      supplier: any;
+      items: Array<{ item: any; supplier: any; supplierQuote: any }>;
+      totalCost: number;
+      firstComments: string | null;
+    }> = [];
+    const groupMap = new Map<string, typeof groups[0]>();
+
+    for (const entry of allLineItems) {
+      const typeKey = entry.item.type || "";
+      const supplierName = entry.supplier?.name || "Unknown";
+      const groupKey = `${supplierName}::${typeKey}`;
+
+      if (!groupMap.has(groupKey)) {
+        const g = {
+          key: groupKey,
+          type: typeKey,
+          supplier: entry.supplier,
+          items: [] as typeof allLineItems,
+          totalCost: 0,
+          firstComments: null as string | null,
+        };
+        groupMap.set(groupKey, g);
+        groups.push(g);
+      }
+      const group = groupMap.get(groupKey)!;
+      group.items.push(entry);
+      const cost = parseFloat(entry.item.costPrice) || 0;
+      group.totalCost += cost * (entry.item.quantity || 0);
+      if (!group.firstComments && entry.item.comments) {
+        group.firstComments = entry.item.comments;
+      }
+    }
+    return groups;
+  }, [allLineItems]);
+
+  // Determine if we have meaningful type groups (more than 1 group, or groups with actual type names)
+  const hasTypeGroups = typeGroups.some((g) => g.type && g.type !== "") && typeGroups.length > 1;
+
+  const toggleType = (key: string) => {
+    setExpandedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // Toggle all items in a type group
+  const toggleTypeGroup = (group: typeof typeGroups[0], e: React.MouseEvent) => {
+    e.stopPropagation();
+    const allSelected = group.items.every(({ item }) => selectedItems.has(item.id));
+    const newSelected = new Map(selectedItems);
+    if (allSelected) {
+      group.items.forEach(({ item }) => newSelected.delete(item.id));
+    } else {
+      group.items.forEach(({ item, supplier }) => {
+        if (!newSelected.has(item.id)) {
+          const savedMargin = item.markupPercent ?? supplier?.defaultMarkupPercent ?? globalMargin;
+          newSelected.set(item.id, {
+            margin: savedMargin,
+            quantity: item.quantity,
+            description: item.description || "",
+            costPrice: parseFloat(item.costPrice),
+            itemType: item.type || "",
+          });
+        }
+      });
+    }
+    setSelectedItems(newSelected);
+  };
+
+  // Render a single item row (used in both flat and grouped views)
+  const renderItemRow = (item: any, supplier: any, isGrouped: boolean = false) => {
+    const isSelected = selectedItems.has(item.id);
+    const data = selectedItems.get(item.id);
+    const cost = parseFloat(item.costPrice);
+    const margin = data?.margin ?? (supplier?.defaultMarkupPercent || 20);
+    const sellPrice = margin >= 100 ? cost : cost / (1 - margin / 100);
+    const qty = data?.quantity ?? item.quantity;
+
+    return (
+      <tr
+        key={item.id}
+        className={`border-b last:border-0 ${isSelected ? "bg-primary/5" : ""}`}
+      >
+        <td className={`${isGrouped ? "pl-8" : ""} p-3`}>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => toggleItem(item.id, item, supplier)}
+          />
+        </td>
+        {!isGrouped && <td className="p-3 text-xs">{supplier?.name || "Unknown"}</td>}
+        {!isGrouped && <td className="p-3 text-xs font-medium">{item.type || "-"}</td>}
+        {isGrouped && <td className="p-3 text-xs text-muted-foreground">{item.productCode}</td>}
+        <td className={`p-3 ${isGrouped ? "" : "font-mono"} text-xs`}>{isGrouped ? item.description : item.productCode}</td>
+        <td className="p-3 text-xs max-w-[200px] truncate">
+          {isGrouped ? "" : item.description}
+        </td>
+        <td className="p-3 text-right">{qty}</td>
+        <td className="p-3 text-right font-mono text-muted-foreground">
+          ${cost.toFixed(2)}
+        </td>
+        <td className="p-3 text-right">
+          <Input
+            type="number"
+            className="w-20 h-7 text-right text-xs"
+            value={isSelected ? (data?.margin ?? margin) : margin}
+            onChange={(e) => {
+              const newMargin = parseInt(e.target.value) || 0;
+              if (isSelected) {
+                updateItemMargin(item.id, newMargin);
+              } else {
+                const clampedMargin = Math.min(99, Math.max(0, newMargin));
+                const newSelected = new Map(selectedItems);
+                newSelected.set(item.id, {
+                  margin: clampedMargin,
+                  quantity: item.quantity,
+                  description: item.description || "",
+                  costPrice: parseFloat(item.costPrice),
+                  itemType: item.type || "",
+                });
+                setSelectedItems(newSelected);
+                saveMarginToDb(item.id, clampedMargin);
+              }
+            }}
+            min={0}
+            max={99}
+          />
+        </td>
+        <td className="p-3 text-right font-mono font-medium">
+          ${sellPrice.toFixed(2)}
+        </td>
+        <td className="p-3 text-right font-mono font-medium">
+          ${(sellPrice * qty).toFixed(2)}
+        </td>
+      </tr>
+    );
+  };
+
+  if (!hasTypeGroups) {
+    // Flat table — no meaningful type groups
+    return (
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="p-3 text-left w-10"></th>
+              <th className="p-3 text-left font-medium text-muted-foreground">Supplier</th>
+              <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+              <th className="p-3 text-left font-medium text-muted-foreground">Product Code</th>
+              <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
+              <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
+              <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+              <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
+              <th className="p-3 text-right font-medium text-muted-foreground">Sell Price</th>
+              <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allLineItems.map(({ item, supplier }) => renderItemRow(item, supplier, false))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // Grouped table with collapsible type sections
+  return (
+    <div className="border rounded-lg overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-muted/50">
+            <th className="p-3 text-left w-10"></th>
+            <th className="p-3 text-left font-medium text-muted-foreground">Supplier / Type</th>
+            <th className="p-3 text-left font-medium text-muted-foreground">Product Code</th>
+            <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
+            <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
+            <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+            <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
+            <th className="p-3 text-right font-medium text-muted-foreground">Sell Price</th>
+            <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {typeGroups.map((group) => {
+            const isExpanded = expandedTypes.has(group.key);
+            const itemCount = group.items.length;
+            const totalQty = group.items.reduce((s, { item }) => s + (item.quantity || 0), 0);
+            const allGroupSelected = group.items.every(({ item }) => selectedItems.has(item.id));
+            const someGroupSelected = group.items.some(({ item }) => selectedItems.has(item.id));
+
+            // Calculate group sell total based on selected margins
+            let groupSellTotal = 0;
+            group.items.forEach(({ item, supplier: sup }) => {
+              const data = selectedItems.get(item.id);
+              const cost = parseFloat(item.costPrice) || 0;
+              const margin = data?.margin ?? (sup?.defaultMarkupPercent || 20);
+              const sell = margin >= 100 ? cost : cost / (1 - margin / 100);
+              groupSellTotal += sell * (item.quantity || 0);
+            });
+
+            return (
+              <React.Fragment key={group.key}>
+                {/* Type group summary row */}
+                <tr
+                  className="border-b bg-muted/40 cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => toggleType(group.key)}
+                >
+                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={allGroupSelected}
+                      className={someGroupSelected && !allGroupSelected ? "opacity-50" : ""}
+                      onCheckedChange={() => {
+                        // Create a synthetic event for toggleTypeGroup
+                        const syntheticEvent = { stopPropagation: () => {} } as React.MouseEvent;
+                        toggleTypeGroup(group, syntheticEvent);
+                      }}
+                    />
+                  </td>
+                  <td className="p-3" colSpan={2}>
+                    <div className="flex items-center gap-2">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="font-semibold text-sm">
+                        {group.supplier?.name || "Unknown"} — {group.type || "Items"}
+                      </span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {itemCount} item{itemCount !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                  </td>
+                  <td className="p-3 text-xs text-muted-foreground">
+                    {group.items[0]?.item.description?.substring(0, 50)}{(group.items[0]?.item.description?.length || 0) > 50 ? "..." : ""}
+                  </td>
+                  <td className="p-3 text-right font-medium">{totalQty}</td>
+                  <td className="p-3 text-right font-mono text-muted-foreground">
+                    ${group.totalCost.toFixed(2)}
+                  </td>
+                  <td className="p-3"></td>
+                  <td className="p-3"></td>
+                  <td className="p-3 text-right font-mono font-semibold">
+                    ${groupSellTotal.toFixed(2)}
+                  </td>
+                </tr>
+                {/* Type notes — shown under summary when expanded, only once */}
+                {isExpanded && group.firstComments && (
+                  <tr className="border-b">
+                    <td></td>
+                    <td colSpan={8} className="py-2 px-3">
+                      <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-200 whitespace-pre-line">
+                        {group.firstComments}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {/* Expanded detail rows */}
+                {isExpanded &&
+                  group.items.map(({ item, supplier: sup }) => {
+                    const isSelected = selectedItems.has(item.id);
+                    const data = selectedItems.get(item.id);
+                    const cost = parseFloat(item.costPrice);
+                    const margin = data?.margin ?? (sup?.defaultMarkupPercent || 20);
+                    const sellPrice = margin >= 100 ? cost : cost / (1 - margin / 100);
+                    const qty = data?.quantity ?? item.quantity;
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={`border-b last:border-0 ${isSelected ? "bg-primary/5" : ""}`}
+                      >
+                        <td className="pl-8 p-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleItem(item.id, item, sup)}
+                          />
+                        </td>
+                        <td className="p-3 font-mono text-xs">{item.productCode}</td>
+                        <td className="p-3 text-xs max-w-[200px] truncate" colSpan={2}>
+                          {item.description}
+                        </td>
+                        <td className="p-3 text-right">{qty}</td>
+                        <td className="p-3 text-right font-mono text-muted-foreground">
+                          ${cost.toFixed(2)}
+                        </td>
+                        <td className="p-3 text-right">
+                          <Input
+                            type="number"
+                            className="w-20 h-7 text-right text-xs"
+                            value={isSelected ? (data?.margin ?? margin) : margin}
+                            onChange={(e) => {
+                              const newMargin = parseInt(e.target.value) || 0;
+                              if (isSelected) {
+                                updateItemMargin(item.id, newMargin);
+                              } else {
+                                const clampedMargin = Math.min(99, Math.max(0, newMargin));
+                                const newSelected = new Map(selectedItems);
+                                newSelected.set(item.id, {
+                                  margin: clampedMargin,
+                                  quantity: item.quantity,
+                                  description: item.description || "",
+                                  costPrice: parseFloat(item.costPrice),
+                                  itemType: item.type || "",
+                                });
+                                setSelectedItems(newSelected);
+                                saveMarginToDb(item.id, clampedMargin);
+                              }
+                            }}
+                            min={0}
+                            max={99}
+                          />
+                        </td>
+                        <td className="p-3 text-right font-mono font-medium">
+                          ${sellPrice.toFixed(2)}
+                        </td>
+                        <td className="p-3 text-right font-mono font-medium">
+                          ${(sellPrice * qty).toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -1429,93 +1936,15 @@ function QuoteBuilder({
           </div>
         </div>
 
-        <div className="border rounded-lg overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="p-3 text-left w-10"></th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Supplier</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Product Code</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
-                <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
-                <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
-                <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
-                <th className="p-3 text-right font-medium text-muted-foreground">Sell Price</th>
-                <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allLineItems.map(({ item, supplier }) => {
-                const isSelected = selectedItems.has(item.id);
-                const data = selectedItems.get(item.id);
-                const cost = parseFloat(item.costPrice);
-                const margin = data?.margin ?? (supplier?.defaultMarkupPercent || 20);
-                // Margin formula: Sell = Cost / (1 - margin/100)
-                const sellPrice = margin >= 100 ? cost : cost / (1 - margin / 100);
-                const qty = data?.quantity ?? item.quantity;
-
-                return (
-                  <tr
-                    key={item.id}
-                    className={`border-b last:border-0 ${isSelected ? "bg-primary/5" : ""}`}
-                  >
-                    <td className="p-3">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleItem(item.id, item, supplier)}
-                      />
-                    </td>
-                    <td className="p-3 text-xs">{supplier?.name || "Unknown"}</td>
-                    <td className="p-3 text-xs font-medium">{item.type || "-"}</td>
-                    <td className="p-3 font-mono text-xs">{item.productCode}</td>
-                    <td className="p-3 text-xs max-w-[200px] truncate">
-                      {item.description}
-                    </td>
-                    <td className="p-3 text-right">{qty}</td>
-                    <td className="p-3 text-right font-mono text-muted-foreground">
-                      ${cost.toFixed(2)}
-                    </td>
-                    <td className="p-3 text-right">
-                      <Input
-                        type="number"
-                        className="w-20 h-7 text-right text-xs"
-                        value={isSelected ? (data?.margin ?? margin) : margin}
-                        onChange={(e) => {
-                          const newMargin = parseInt(e.target.value) || 0;
-                          if (isSelected) {
-                            updateItemMargin(item.id, newMargin);
-                          } else {
-                            // Auto-select the item when editing its margin
-                            const clampedMargin = Math.min(99, Math.max(0, newMargin));
-                            const newSelected = new Map(selectedItems);
-                            newSelected.set(item.id, {
-                              margin: clampedMargin,
-                              quantity: item.quantity,
-                              description: item.description || "",
-                              costPrice: parseFloat(item.costPrice),
-                              itemType: item.type || "",
-                            });
-                            setSelectedItems(newSelected);
-                            saveMarginToDb(item.id, clampedMargin);
-                          }
-                        }}
-                        min={0}
-                        max={99}
-                      />
-                    </td>
-                    <td className="p-3 text-right font-mono font-medium">
-                      ${sellPrice.toFixed(2)}
-                    </td>
-                    <td className="p-3 text-right font-mono font-medium">
-                      ${(sellPrice * qty).toFixed(2)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <QuoteBuilderTable
+          allLineItems={allLineItems}
+          selectedItems={selectedItems}
+          toggleItem={toggleItem}
+          updateItemMargin={updateItemMargin}
+          saveMarginToDb={saveMarginToDb}
+          setSelectedItems={setSelectedItems}
+          globalMargin={globalMargin}
+        />
       </div>
 
       {/* Totals */}

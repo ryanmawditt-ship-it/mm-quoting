@@ -301,6 +301,8 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
     const generalLT = extracted.generalLeadTimeDays || null;
 
     // 8. Save extracted line items to database with enriched data
+    // Track which types have already had their typeNotes attached (only show once per type)
+    const typeNotesAttached = new Set<string>();
     const savedItems: any[] = [];
     let itemIdx = 0;
     for (const item of extracted.lineItems) {
@@ -313,8 +315,12 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
       const isBundled = item.isBundled === true || (unitPrice === 0 && quantity > 0 && !item.productCode?.toUpperCase().includes("FREIGHT"));
 
       // Merge typeNotes and comments into a single comments field
-      // typeNotes contains critical info from TYPE headers (assembly specs, LED runs, warnings)
-      const typeNotes = item.typeNotes || null;
+      // typeNotes only appear on the FIRST item of each type group (no repeating)
+      const rawTypeNotes = item.typeNotes || null;
+      const typeKey = (item.type || "").trim().toUpperCase();
+      const isFirstOfType = typeKey && rawTypeNotes && !typeNotesAttached.has(typeKey);
+      if (isFirstOfType) typeNotesAttached.add(typeKey);
+      const typeNotes = isFirstOfType ? rawTypeNotes : null;
       const itemComments = item.comments || null;
       let mergedComments: string | null = null;
       if (typeNotes && itemComments) {
@@ -837,61 +843,83 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       let totalExclGst = 0;
       let totalGst = 0;
 
-      for (let i = 0; i < data.lineItems.length; i++) {
-        const item = data.lineItems[i];
-        const lineExcl = item.sellPrice * item.quantity;
-        const lineGst  = lineExcl * 0.1;
-        const lineIncl = lineExcl + lineGst;
-        totalExclGst += lineExcl;
-        totalGst += lineGst;
+      // Group line items by type for the PDF
+      interface TypeGroup {
+        type: string;
+        items: typeof data.lineItems;
+        groupTotal: number;
+      }
+      const pdfTypeGroups: TypeGroup[] = [];
+      const pdfGroupMap = new Map<string, TypeGroup>();
 
-        // Measure how tall this row needs to be for the full description
-        const descHeight = measureDescHeight(item.description);
-        const rowH = Math.max(MIN_ROW_H, descHeight + ROW_PAD_TOP + ROW_PAD_BOT);
+      for (const item of data.lineItems) {
+        const typeKey = item.itemType || "";
+        if (!pdfGroupMap.has(typeKey)) {
+          const g: TypeGroup = { type: typeKey, items: [], groupTotal: 0 };
+          pdfGroupMap.set(typeKey, g);
+          pdfTypeGroups.push(g);
+        }
+        const group = pdfGroupMap.get(typeKey)!;
+        group.items.push(item);
+        group.groupTotal += item.sellPrice * item.quantity;
+      }
 
-        // New page check — leave room for totals (~100pt)
-        if (tableY + rowH > PH - MB - 100) {
+      // Determine if we should use grouped rendering
+      const useGroupedPdf = pdfTypeGroups.length > 1 || (pdfTypeGroups.length === 1 && pdfTypeGroups[0].type !== "");
+
+      let rowCounter = 0;
+
+      const ensurePageSpace = (neededH: number) => {
+        if (tableY + neededH > PH - MB - 100) {
           doc.addPage();
-          // Re-draw accent bar
           doc.save();
           doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();
           doc.restore();
           tableY = drawTableHeader(MT + 10);
         }
+      };
+
+      // Draw a single item row
+      const drawItemRow = (item: typeof data.lineItems[0], lineNum: number) => {
+        const lineExcl = item.sellPrice * item.quantity;
+        const lineGst  = lineExcl * 0.1;
+        totalExclGst += lineExcl;
+        totalGst += lineGst;
+
+        const descHeight = measureDescHeight(item.description);
+        const rowH = Math.max(MIN_ROW_H, descHeight + ROW_PAD_TOP + ROW_PAD_BOT);
+
+        ensurePageSpace(rowH);
 
         // Alternating row bg
-        if (i % 2 === 0) {
+        if (rowCounter % 2 === 0) {
           doc.save();
           doc.rect(ML, tableY, CW, rowH).fillColor(C.rowAlt).fill();
           doc.restore();
         }
+        rowCounter++;
 
-        // Bottom border for each row
         doc.moveTo(ML, tableY + rowH).lineTo(PW - MR, tableY + rowH).strokeColor(C.border).lineWidth(0.3).stroke();
 
         const rowTextY = tableY + ROW_PAD_TOP;
         doc.fontSize(7.5).font("Helvetica").fillColor(C.body);
 
         let x = ML + 8;
-        doc.text(String(item.lineOrder), x, rowTextY, { width: COL.num.w, align: COL.num.align });
+        doc.text(String(lineNum), x, rowTextY, { width: COL.num.w, align: COL.num.align });
         x += COL.num.w;
 
-        // Type column
         doc.font("Helvetica-Bold").fillColor(C.accent);
         doc.text(item.itemType || "-", x, rowTextY, { width: COL.type.w - 2, align: COL.type.align });
         x += COL.type.w;
 
-        // Product code in slightly bolder style
         doc.font("Helvetica-Bold").fillColor(C.dark);
         doc.text(item.productCode, x, rowTextY, { width: COL.code.w - 4, align: COL.code.align });
         x += COL.code.w;
 
-        // Description — full text, wraps dynamically
         doc.fontSize(DESC_FONT_SIZE).font("Helvetica").fillColor(C.body);
         doc.text(item.description, x, rowTextY, { width: COL.desc.w - 4, align: COL.desc.align });
         x += COL.desc.w;
 
-        // Remaining columns vertically centred in the row
         const centreY = tableY + (rowH / 2) - 4;
         doc.fontSize(7.5);
 
@@ -915,6 +943,54 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         doc.text(`$${fmtMoney(lineExcl)}`, x, centreY, { width: COL.total.w, align: COL.total.align, lineBreak: false });
 
         tableY += rowH;
+      };
+
+      if (useGroupedPdf) {
+        // Grouped rendering: type summary header + detail rows
+        let lineNum = 1;
+        for (const group of pdfTypeGroups) {
+          // Draw type group header row
+          const groupHeaderH = 24;
+          ensurePageSpace(groupHeaderH);
+
+          // Subtle accent background for group header
+          doc.save();
+          doc.rect(ML, tableY, CW, groupHeaderH).fillColor("#eef2ff").fill();
+          doc.restore();
+
+          // Left accent bar
+          doc.save();
+          doc.rect(ML, tableY, 3, groupHeaderH).fillColor(C.accent).fill();
+          doc.restore();
+
+          doc.moveTo(ML, tableY + groupHeaderH).lineTo(PW - MR, tableY + groupHeaderH).strokeColor(C.border).lineWidth(0.5).stroke();
+
+          const ghTextY = tableY + 7;
+          doc.fontSize(8).font("Helvetica-Bold").fillColor(C.navy);
+          doc.text(group.type || "Items", ML + 12, ghTextY, { width: CW - 120 });
+
+          // Item count
+          doc.fontSize(7).font("Helvetica").fillColor(C.muted);
+          doc.text(`${group.items.length} item${group.items.length !== 1 ? "s" : ""}`, ML + 12, ghTextY + 10, { width: 100 });
+
+          // Group total on the right
+          doc.fontSize(8.5).font("Helvetica-Bold").fillColor(C.navy);
+          const totalColX = ML + 8 + COL.num.w + COL.type.w + COL.code.w + COL.desc.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w;
+          doc.text(`$${fmtMoney(group.groupTotal)}`, totalColX, ghTextY + 3, { width: COL.total.w, align: COL.total.align });
+
+          tableY += groupHeaderH;
+          rowCounter = 0; // Reset alternating for each group
+
+          // Draw individual items in this group
+          for (const item of group.items) {
+            drawItemRow(item, lineNum++);
+          }
+        }
+      } else {
+        // Flat rendering (no meaningful type groups)
+        for (let i = 0; i < data.lineItems.length; i++) {
+          drawItemRow(data.lineItems[i], i + 1);
+        }
       }
 
       // ================================================================

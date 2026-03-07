@@ -176,3 +176,7 @@
 - [x] Include LED strip run lengths, PSU details, converter specs, finish notes in descriptions
 - [x] Items without qty/price should still be captured as descriptive detail under their Type
 - [x] Preserve supplier notes like "Finish to be confirmed", "Quoted as per Section drawing"
+- [x] Fix typeNotes to only show on first item per type group (no repeating)
+- [x] Build collapsible type groups in supplier quote card (summary row with bundled total, expand for detail)
+- [x] Build collapsible type groups in quote builder (same pattern)
+- [x] Update customer quote PDF to group items by Type with summary header rows and type totals

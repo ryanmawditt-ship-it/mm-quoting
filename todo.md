@@ -140,3 +140,8 @@
 - [x] Ensure lead time data is stored and displayed in the quote builder and PDF
 - [x] Fix: Supplier quote PDF extraction is failing after recent changes (JSON schema structure was broken)
 - [x] Remove per-line GST column from customer PDF — show GST only as a total at the bottom
+- [x] Add editable customer details header to quote builder (name, email, address, phone, contact person)
+- [x] Pre-fill customer details from project data
+- [x] Add special instructions/notes section to quote builder (delivery instructions, additional costs, etc.)
+- [x] Include customer details in PDF header (Quote To / Deliver To with copy button)
+- [x] Include special instructions/notes on last page of PDF (amber highlighted box)

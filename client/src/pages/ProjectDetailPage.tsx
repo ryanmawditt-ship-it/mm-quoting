@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +36,12 @@ import {
   XCircle,
   Eye,
   File,
+  Truck,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  StickyNote,
 } from "lucide-react";
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -672,6 +679,18 @@ function QuoteBuilder({
   const [validDays, setValidDays] = useState(28);
   const [generating, setGenerating] = useState(false);
 
+  // Editable customer details — pre-filled from project
+  const [customerName, setCustomerName] = useState(project.customerName || "");
+  const [customerContact, setCustomerContact] = useState(project.customerContact || "");
+  const [customerEmail, setCustomerEmail] = useState(project.customerEmail || "");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState(project.customerAddress || "");
+  const [deliverToName, setDeliverToName] = useState(project.customerName || "");
+  const [deliverToAddress, setDeliverToAddress] = useState(project.customerAddress || "");
+
+  // Special instructions / notes
+  const [specialInstructions, setSpecialInstructions] = useState("");
+
   // Margin persistence mutations
   const updateMarginMutation = trpc.lineItems.updateMargin.useMutation();
   const updateMarginsMutation = trpc.lineItems.updateMargins.useMutation();
@@ -843,6 +862,18 @@ function QuoteBuilder({
           jobTitle,
           validDays,
           globalMarginPercent: globalMargin,
+          customerDetails: {
+            name: customerName,
+            contact: customerContact,
+            email: customerEmail,
+            phone: customerPhone,
+            address: customerAddress,
+          },
+          deliverTo: {
+            name: deliverToName,
+            address: deliverToAddress,
+          },
+          specialInstructions,
         }),
       });
 
@@ -866,7 +897,7 @@ function QuoteBuilder({
   return (
     <div className="space-y-6">
       {/* Quote Details */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Job Title</Label>
           <Input
@@ -899,13 +930,123 @@ function QuoteBuilder({
             min={1}
           />
         </div>
-        <div className="space-y-2">
-          <Label>Margin Info</Label>
-          <p className="text-xs text-muted-foreground mt-1 p-2 bg-muted/30 rounded">
-            Each line item's margin is saved individually. Use "Apply to All" to set a global margin, or edit each line directly.
-          </p>
+      </div>
+
+      <Separator />
+
+      {/* Customer Details — Quote To / Deliver To */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Quote To */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">Quote To</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Company / Customer Name</Label>
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Customer or company name"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Contact Person</Label>
+              <Input
+                value={customerContact}
+                onChange={(e) => setCustomerContact(e.target.value)}
+                placeholder="Attn: Contact name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Email</Label>
+                <Input
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Phone</Label>
+                <Input
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Phone number"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Address</Label>
+              <Input
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                placeholder="Street address, city, state, postcode"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Deliver To */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Truck className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">Deliver To</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Delivery Name</Label>
+              <Input
+                value={deliverToName}
+                onChange={(e) => setDeliverToName(e.target.value)}
+                placeholder="Delivery recipient name"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Delivery Address</Label>
+              <Textarea
+                value={deliverToAddress}
+                onChange={(e) => setDeliverToAddress(e.target.value)}
+                placeholder="Delivery address"
+                rows={3}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => {
+                setDeliverToName(customerName);
+                setDeliverToAddress(customerAddress);
+              }}
+            >
+              Copy from Quote To
+            </Button>
+          </div>
         </div>
       </div>
+
+      <Separator />
+
+      {/* Special Instructions / Notes */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <StickyNote className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm">Special Instructions & Notes</h3>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Add delivery instructions, additional costs, exclusions, or any other notes for the customer. This will appear on the last page of the quote PDF.
+        </p>
+        <Textarea
+          value={specialInstructions}
+          onChange={(e) => setSpecialInstructions(e.target.value)}
+          placeholder={"e.g.\n- Delivery to site: $500 + GST\n- Crane hire not included\n- Items subject to availability\n- Please allow 4-6 weeks for delivery"}
+          rows={5}
+        />
+      </div>
+
+      <Separator />
 
       {/* Global Margin Control — always visible */}
       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">

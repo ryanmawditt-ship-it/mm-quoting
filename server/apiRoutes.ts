@@ -274,7 +274,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
       return;
     }
 
-    const { projectId, items, salespersonId, jobTitle, validDays, globalMarginPercent } = req.body;
+    const { projectId, items, salespersonId, jobTitle, validDays, globalMarginPercent, customerDetails, deliverTo, specialInstructions } = req.body;
 
     if (!projectId || !items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "Missing projectId or items" });
@@ -389,6 +389,9 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
       salespersonName,
       jobTitle: jobTitle || project.name,
       lineItems: quoteLineItems,
+      customerDetails: customerDetails || null,
+      deliverTo: deliverTo || null,
+      specialInstructions: specialInstructions || "",
     });
 
     // Upload PDF to S3
@@ -439,6 +442,18 @@ interface QuotePDFData {
     leadTimeDays: number | null;
     unitOfMeasure: string;
   }>;
+  customerDetails: {
+    name: string;
+    contact: string;
+    email: string;
+    phone: string;
+    address: string;
+  } | null;
+  deliverTo: {
+    name: string;
+    address: string;
+  } | null;
+  specialInstructions: string;
 }
 
 // Colour palette
@@ -623,46 +638,64 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       Y += 14;
 
       // ---- Quote To / Deliver To ----
+      const cust = data.customerDetails;
+      const del = data.deliverTo;
+      const custName = cust?.name || data.project.customerName || "";
+      const custContact = cust?.contact || data.project.customerContact || "";
+      const custEmail = cust?.email || data.project.customerEmail || "";
+      const custPhone = cust?.phone || "";
+      const custAddress = cust?.address || data.project.customerAddress || "";
+      const delName = del?.name || custName;
+      const delAddress = del?.address || custAddress;
+
       const halfW = (CW - 20) / 2;
+
+      // Measure Quote To box height dynamically
+      let quoteToLines = 1; // company name
+      if (custContact) quoteToLines++;
+      if (custEmail || custPhone) quoteToLines++;
+      if (custAddress) quoteToLines++;
+      const boxH = Math.max(70, 28 + quoteToLines * 13);
 
       // Quote To box
       doc.save();
-      doc.roundedRect(ML, Y, halfW, 70, 4).fillColor(C.accentLight).fill();
+      doc.roundedRect(ML, Y, halfW, boxH, 4).fillColor(C.accentLight).fill();
       doc.restore();
       doc.fontSize(7).font("Helvetica-Bold").fillColor(C.accent);
       doc.text("QUOTE TO", ML + 12, Y + 8);
       doc.fontSize(9).font("Helvetica-Bold").fillColor(C.dark);
-      doc.text(data.project.customerName, ML + 12, Y + 22, { width: halfW - 24 });
+      doc.text(custName, ML + 12, Y + 22, { width: halfW - 24 });
       let qY = Y + 35;
       doc.fontSize(8).font("Helvetica").fillColor(C.body);
-      if (data.project.customerContact) {
-        doc.text(`Attn: ${data.project.customerContact}`, ML + 12, qY, { width: halfW - 24 });
+      if (custContact) {
+        doc.text(`Attn: ${custContact}`, ML + 12, qY, { width: halfW - 24 });
         qY += 11;
       }
-      if (data.project.customerAddress) {
-        doc.text(data.project.customerAddress, ML + 12, qY, { width: halfW - 24 });
+      if (custAddress) {
+        doc.text(custAddress, ML + 12, qY, { width: halfW - 24 });
         qY += 11;
       }
-      if (data.project.customerEmail) {
-        doc.text(data.project.customerEmail, ML + 12, qY, { width: halfW - 24 });
+      const contactParts2 = [custEmail, custPhone].filter(Boolean);
+      if (contactParts2.length) {
+        doc.text(contactParts2.join("  \u00B7  "), ML + 12, qY, { width: halfW - 24 });
       }
 
       // Deliver To box
       const dtX = ML + halfW + 20;
       doc.save();
-      doc.roundedRect(dtX, Y, halfW, 70, 4).fillColor(C.accentLight).fill();
+      doc.roundedRect(dtX, Y, halfW, boxH, 4).fillColor(C.accentLight).fill();
       doc.restore();
       doc.fontSize(7).font("Helvetica-Bold").fillColor(C.accent);
       doc.text("DELIVER TO", dtX + 12, Y + 8);
       doc.fontSize(9).font("Helvetica-Bold").fillColor(C.dark);
-      doc.text(data.project.customerName, dtX + 12, Y + 22, { width: halfW - 24 });
+      doc.text(delName, dtX + 12, Y + 22, { width: halfW - 24 });
       let dY = Y + 35;
       doc.fontSize(8).font("Helvetica").fillColor(C.body);
-      if (data.project.customerAddress) {
-        doc.text(data.project.customerAddress, dtX + 12, dY, { width: halfW - 24 });
+      if (delAddress) {
+        doc.text(delAddress, dtX + 12, dY, { width: halfW - 24 });
       }
 
-      Y += 82;
+      Y += boxH + 12;
 
       // ================================================================
       // TABLE
@@ -792,10 +825,46 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       tableY += 82;
 
       // ================================================================
+      // SPECIAL INSTRUCTIONS & NOTES
+      // ================================================================
+      if (data.specialInstructions && data.specialInstructions.trim()) {
+        // Measure height needed
+        doc.fontSize(8).font("Helvetica");
+        const instrHeight = doc.heightOfString(data.specialInstructions, { width: CW - 24, lineGap: 3 });
+        const instrBoxH = instrHeight + 40; // padding + title
+
+        if (tableY + instrBoxH > PH - MB) {
+          doc.addPage();
+          doc.save();
+          doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();
+          doc.restore();
+          tableY = MT + 10;
+        }
+
+        tableY += 12;
+
+        // Light background box
+        doc.save();
+        doc.roundedRect(ML, tableY, CW, instrBoxH, 4).fillColor("#fef9e7").fill();
+        doc.roundedRect(ML, tableY, CW, instrBoxH, 4).strokeColor("#f59e0b").lineWidth(0.5).stroke();
+        doc.restore();
+
+        doc.fontSize(8).font("Helvetica-Bold").fillColor(C.navy);
+        doc.text("Special Instructions & Notes", ML + 12, tableY + 10);
+        tableY += 26;
+        doc.fontSize(8).font("Helvetica").fillColor(C.body);
+        doc.text(data.specialInstructions, ML + 12, tableY, { width: CW - 24, lineGap: 3 });
+        tableY += instrHeight + 14;
+      }
+
+      // ================================================================
       // TERMS & CONDITIONS
       // ================================================================
       if (settings?.standardTerms) {
-        if (tableY + 60 > PH - MB) {
+        doc.fontSize(7).font("Helvetica");
+        const termsHeight = doc.heightOfString(settings.standardTerms, { width: CW, lineGap: 3 });
+
+        if (tableY + termsHeight + 30 > PH - MB) {
           doc.addPage();
           doc.save();
           doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();

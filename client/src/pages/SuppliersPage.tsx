@@ -8,19 +8,51 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Truck, Plus, Search, Percent, Mail, Phone, User } from "lucide-react";
+import { Truck, Plus, Search, Percent, Mail, Phone, User, Pencil, Trash2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
 export default function SuppliersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [supplierToDelete, setSupplierToDelete] = useState<{ id: number; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: suppliers, isLoading } = trpc.suppliers.list.useQuery();
   const utils = trpc.useUtils();
+
+  // Create form state
+  const [form, setForm] = useState({
+    name: "",
+    contact: "",
+    email: "",
+    phone: "",
+    defaultMarkupPercent: 20,
+  });
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    id: 0,
+    name: "",
+    contact: "",
+    email: "",
+    phone: "",
+    defaultMarkupPercent: 20,
+  });
 
   const createSupplier = trpc.suppliers.create.useMutation({
     onSuccess: () => {
@@ -34,12 +66,27 @@ export default function SuppliersPage() {
     },
   });
 
-  const [form, setForm] = useState({
-    name: "",
-    contact: "",
-    email: "",
-    phone: "",
-    defaultMarkupPercent: 20,
+  const updateSupplier = trpc.suppliers.update.useMutation({
+    onSuccess: () => {
+      utils.suppliers.list.invalidate();
+      setEditDialogOpen(false);
+      toast.success("Supplier updated");
+    },
+    onError: () => {
+      toast.error("Failed to update supplier");
+    },
+  });
+
+  const deleteSupplier = trpc.suppliers.delete.useMutation({
+    onSuccess: () => {
+      utils.suppliers.list.invalidate();
+      setDeleteDialogOpen(false);
+      setSupplierToDelete(null);
+      toast.success("Supplier deleted");
+    },
+    onError: () => {
+      toast.error("Failed to delete supplier");
+    },
   });
 
   const filteredSuppliers = useMemo(() => {
@@ -59,6 +106,46 @@ export default function SuppliersPage() {
       return;
     }
     createSupplier.mutate(form);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm.name.trim()) {
+      toast.error("Supplier name is required");
+      return;
+    }
+    updateSupplier.mutate({
+      id: editForm.id,
+      name: editForm.name,
+      contact: editForm.contact || null,
+      email: editForm.email || null,
+      phone: editForm.phone || null,
+      defaultMarkupPercent: editForm.defaultMarkupPercent,
+    });
+  };
+
+  const openEditDialog = (supplier: {
+    id: number;
+    name: string;
+    contact: string | null;
+    email: string | null;
+    phone: string | null;
+    defaultMarkupPercent: number;
+  }) => {
+    setEditForm({
+      id: supplier.id,
+      name: supplier.name,
+      contact: supplier.contact || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      defaultMarkupPercent: supplier.defaultMarkupPercent,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (supplier: { id: number; name: string }) => {
+    setSupplierToDelete(supplier);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -222,15 +309,143 @@ export default function SuppliersPage() {
                       )}
                     </div>
                   </div>
-                  <Badge variant="secondary" className="shrink-0 text-sm font-semibold">
-                    {supplier.defaultMarkupPercent}% margin
-                  </Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="secondary" className="text-sm font-semibold">
+                      {supplier.defaultMarkupPercent}% margin
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={() => openEditDialog(supplier)}
+                      title="Edit supplier"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => openDeleteDialog(supplier)}
+                      title="Delete supplier"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Edit Supplier Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Supplier</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Supplier Name *</Label>
+              <Input
+                id="edit-name"
+                placeholder="e.g., Everlite Lighting Group"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-contact">Contact Person</Label>
+                <Input
+                  id="edit-contact"
+                  placeholder="e.g., Sarah Johnson"
+                  value={editForm.contact}
+                  onChange={(e) => setEditForm({ ...editForm, contact: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  placeholder="e.g., 1300 123 456"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="quotes@supplier.com.au"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-margin">Default Margin %</Label>
+              <div className="relative">
+                <Input
+                  id="edit-margin"
+                  type="number"
+                  min={0}
+                  max={99}
+                  placeholder="20"
+                  value={editForm.defaultMarkupPercent}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, defaultMarkupPercent: parseInt(e.target.value) || 0 })
+                  }
+                  className="pr-8"
+                />
+                <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This margin will be auto-applied when importing quotes from this supplier.
+                E.g., 5% margin: Sell = Cost &divide; 0.95
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateSupplier.isPending}>
+                {updateSupplier.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Supplier Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Supplier</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{supplierToDelete?.name}</strong>? This will
+              also permanently remove all supplier quotes, line items, and project tracking entries
+              associated with this supplier. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSupplierToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (supplierToDelete) {
+                  deleteSupplier.mutate({ id: supplierToDelete.id });
+                }
+              }}
+              disabled={deleteSupplier.isPending}
+            >
+              {deleteSupplier.isPending ? "Deleting..." : "Delete Supplier"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

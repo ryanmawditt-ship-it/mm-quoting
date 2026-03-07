@@ -144,6 +144,55 @@ export async function getSupplierById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateSupplier(id: number, data: { name?: string; contact?: string | null; email?: string | null; phone?: string | null; defaultMarkupPercent?: number }) {
+  const db = await getDb();
+  if (!db) return;
+  const updateSet: Record<string, unknown> = {};
+  if (data.name !== undefined) updateSet.name = data.name;
+  if (data.contact !== undefined) updateSet.contact = data.contact;
+  if (data.email !== undefined) updateSet.email = data.email;
+  if (data.phone !== undefined) updateSet.phone = data.phone;
+  if (data.defaultMarkupPercent !== undefined) updateSet.defaultMarkupPercent = data.defaultMarkupPercent;
+  if (Object.keys(updateSet).length === 0) return;
+  await db.update(suppliers).set(updateSet).where(eq(suppliers.id, id));
+}
+
+/**
+ * Delete a supplier and cascade: re-assign or delete related supplier_quotes,
+ * line_items, customer_quote_line_items, and project_suppliers.
+ */
+export async function deleteSupplier(supplierId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Get all supplier quotes for this supplier
+  const sqList = await db.select({ id: supplierQuotes.id }).from(supplierQuotes).where(eq(supplierQuotes.supplierId, supplierId));
+  const sqIds = sqList.map(sq => sq.id);
+
+  if (sqIds.length > 0) {
+    // Get all line items for those supplier quotes
+    const liList = await db.select({ id: lineItems.id }).from(lineItems).where(inArray(lineItems.supplierQuoteId, sqIds));
+    const liIds = liList.map(li => li.id);
+
+    // Delete customer quote line items that reference these line items
+    if (liIds.length > 0) {
+      await db.delete(customerQuoteLineItems).where(inArray(customerQuoteLineItems.lineItemId, liIds));
+    }
+
+    // Delete line items
+    await db.delete(lineItems).where(inArray(lineItems.supplierQuoteId, sqIds));
+
+    // Delete supplier quotes
+    await db.delete(supplierQuotes).where(eq(supplierQuotes.supplierId, supplierId));
+  }
+
+  // Delete project supplier tracking entries
+  await db.delete(projectSuppliers).where(eq(projectSuppliers.supplierId, supplierId));
+
+  // Delete the supplier itself
+  await db.delete(suppliers).where(eq(suppliers.id, supplierId));
+}
+
 /**
  * Normalise a supplier name for matching: lowercase, strip common suffixes
  * (PTY, LTD, GROUP, INC, CO, CORP, SPECIALISTS, AGENCIES), remove non-alphanumeric.

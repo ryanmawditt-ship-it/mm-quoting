@@ -28,6 +28,8 @@ import {
   updateLineItemMargins,
   deleteProject,
   deleteSupplierQuote,
+  updateSupplier,
+  deleteSupplier,
   getProjectSuppliers,
   addProjectSupplier,
   removeProjectSupplier,
@@ -106,6 +108,21 @@ export const appRouter = router({
           input.defaultMarkupPercent
         )
       ),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          contact: z.string().nullable().optional(),
+          email: z.string().nullable().optional(),
+          phone: z.string().nullable().optional(),
+          defaultMarkupPercent: z.number().optional(),
+        })
+      )
+      .mutation(({ input }) => updateSupplier(input.id, input)),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => deleteSupplier(input.id)),
   }),
 
   // Projects

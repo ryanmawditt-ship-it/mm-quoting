@@ -197,4 +197,8 @@
 - [x] Audit and identify duplicate suppliers in the database
 - [x] Merge duplicate suppliers: consolidate quotes, line items, and project_suppliers into one canonical supplier
 - [x] Improve supplier name matching logic to prevent future duplicates (fuzzy/normalised matching)
-- [ ] Add supplier edit/delete functionality on the Suppliers page
+- [x] Add supplier edit/delete functionality on the Suppliers page
+- [x] Add backend procedure to update supplier details (name, contact, email, phone, default margin)
+- [x] Add backend procedure to delete a supplier (with cascade check for existing quotes)
+- [x] Add edit dialog/inline editing on Suppliers page
+- [x] Add delete button with confirmation dialog on Suppliers page

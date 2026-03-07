@@ -1,0 +1,40 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "company_settings"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "customer_quote_line_items"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "customer_quotes"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "line_items"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "projects"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "salespersons"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "supplier_quotes"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "suppliers"
+    },
+    {
+      "Tables_in_89sPt5WznQmH7pHfxEjFRd": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_89sPt5WznQmH7pHfxEjFRd\n__drizzle_migrations\ncompany_settings\ncustomer_quote_line_items\ncustomer_quotes\nline_items\nprojects\nsalespersons\nsupplier_quotes\nsuppliers\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1596
+}

@@ -138,3 +138,4 @@
 - [x] Fix: Product descriptions getting truncated in PDF — must show full descriptions with dynamic row heights
 - [x] Update AI extraction to read lead times / delivery times from supplier quotes
 - [x] Ensure lead time data is stored and displayed in the quote builder and PDF
+- [x] Fix: Supplier quote PDF extraction is failing after recent changes (JSON schema structure was broken)

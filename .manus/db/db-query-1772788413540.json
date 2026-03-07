@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM customer_quote_line_items; DELETE FROM customer_quotes; DELETE FROM line_items; DELETE FROM supplier_quotes; DELETE FROM projects;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute DELETE FROM customer_quote_line_items; DELETE FROM customer_quotes; DELETE FROM line_items; DELETE FROM supplier_quotes; DELETE FROM projects;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2600
+}

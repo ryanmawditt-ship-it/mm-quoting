@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, name, status FROM projects ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, name, status FROM projects ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "won"
+    },
+    {
+      "id": "2",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "3",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "4",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "5",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "30001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "30002",
+      "name": "Bazaar ",
+      "status": "active"
+    },
+    {
+      "id": "30003",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "30004",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "30005",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "30006",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    },
+    {
+      "id": "30007",
+      "name": "Bazaar Restaurant - Stage 1",
+      "status": "active"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tstatus\n1\tBazaar Restaurant - Stage 1\twon\n2\tBazaar Restaurant - Stage 1\tactive\n3\tBazaar Restaurant - Stage 1\tactive\n4\tBazaar Restaurant - Stage 1\tactive\n5\tBazaar Restaurant - Stage 1\tactive\n30001\tBazaar Restaurant - Stage 1\tactive\n30002\tBazaar \tactive\n30003\tBazaar Restaurant - Stage 1\tactive\n30004\tBazaar Restaurant - Stage 1\tactive\n30005\tBazaar Restaurant - Stage 1\tactive\n30006\tBazaar Restaurant - Stage 1\tactive\n30007\tBazaar Restaurant - Stage 1\tactive\n",
+  "stderr": "",
+  "execution_time_ms": 1711
+}

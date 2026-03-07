@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, companySettings, InsertCompanySettings, salespersons, suppliers, projects, supplierQuotes, lineItems, customerQuotes, customerQuoteLineItems } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -178,10 +178,42 @@ export async function getProjectById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function updateProjectStatus(id: number, status: 'active' | 'won' | 'lost' | 'follow_up_needed') {
+export async function updateProjectStatus(id: number, status: 'pending' | 'sent' | 'in_progress' | 'won' | 'lost') {
   const db = await getDb();
   if (!db) return;
   await db.update(projects).set({ status, updatedAt: new Date() }).where(eq(projects.id, id));
+}
+
+export async function deleteProject(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Get all supplier quotes for this project
+  const sqList = await db.select({ id: supplierQuotes.id }).from(supplierQuotes).where(eq(supplierQuotes.projectId, id));
+  const sqIds = sqList.map(sq => sq.id);
+
+  // Get all line items for those supplier quotes
+  if (sqIds.length > 0) {
+    const liList = await db.select({ id: lineItems.id }).from(lineItems).where(inArray(lineItems.supplierQuoteId, sqIds));
+    const liIds = liList.map(li => li.id);
+
+    // Delete customer quote line items that reference these line items
+    if (liIds.length > 0) {
+      await db.delete(customerQuoteLineItems).where(inArray(customerQuoteLineItems.lineItemId, liIds));
+    }
+
+    // Delete line items
+    await db.delete(lineItems).where(inArray(lineItems.supplierQuoteId, sqIds));
+  }
+
+  // Delete customer quotes for this project
+  await db.delete(customerQuotes).where(eq(customerQuotes.projectId, id));
+
+  // Delete supplier quotes
+  await db.delete(supplierQuotes).where(eq(supplierQuotes.projectId, id));
+
+  // Delete the project itself
+  await db.delete(projects).where(eq(projects.id, id));
 }
 
 /**

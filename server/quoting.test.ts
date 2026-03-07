@@ -159,8 +159,8 @@ describe("Projects", () => {
     expect(bazaar).toBeDefined();
     if (bazaar) {
       expect(bazaar.customerName).toBe("Electract Energy Pty Ltd");
-      // Status may be 'active' or 'won' depending on test execution order
-      expect(["active", "won"]).toContain(bazaar.status);
+      // Status may be 'pending' or 'won' depending on test execution order
+      expect(["pending", "won"]).toContain(bazaar.status);
     }
   });
 
@@ -422,6 +422,57 @@ describe("Quote Versioning", () => {
 
     const v10 = `${baseQuoteNumber}-${String(10).padStart(3, "0")}`;
     expect(v10).toBe("880-000001-010");
+  });
+});
+
+describe("Project Status Management", () => {
+  it("cycles through all status values", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const list = await caller.projects.list();
+    if (list.length > 0) {
+      const project = list[0];
+      const statuses = ["pending", "sent", "in_progress", "won", "lost"] as const;
+
+      for (const status of statuses) {
+        await caller.projects.updateStatus({ id: project.id, status });
+        const updated = await caller.projects.getById({ id: project.id });
+        expect(updated).toBeDefined();
+        if (updated) {
+          expect(updated.status).toBe(status);
+        }
+      }
+
+      // Reset to pending for other tests
+      await caller.projects.updateStatus({ id: project.id, status: "pending" });
+    }
+  });
+});
+
+describe("Project Delete", () => {
+  it("creates and deletes a project with cascade", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    // Create a project to delete
+    await caller.projects.create({
+      name: "Delete Test Project",
+      customerName: "Test Customer",
+      description: "This project will be deleted",
+    });
+
+    const listBefore = await caller.projects.list();
+    const deleteTarget = listBefore.find((p) => p.name === "Delete Test Project");
+    expect(deleteTarget).toBeDefined();
+
+    if (deleteTarget) {
+      await caller.projects.delete({ id: deleteTarget.id });
+
+      const listAfter = await caller.projects.list();
+      const deleted = listAfter.find((p) => p.name === "Delete Test Project");
+      expect(deleted).toBeUndefined();
+    }
   });
 });
 

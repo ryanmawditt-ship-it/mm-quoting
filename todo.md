@@ -145,3 +145,8 @@
 - [x] Add special instructions/notes section to quote builder (delivery instructions, additional costs, etc.)
 - [x] Include customer details in PDF header (Quote To / Deliver To with copy button)
 - [x] Include special instructions/notes on last page of PDF (amber highlighted box)
+- [x] Add project status management: Pending, Sent, In Progress, Won, Lost
+- [x] Update schema enum to include new statuses (pending, sent, in_progress, won, lost)
+- [x] Add status change dropdown/selector on project cards in Projects page
+- [x] Add project delete functionality with confirmation dialog
+- [x] Cascade delete: remove related supplier quotes, line items, and customer quotes

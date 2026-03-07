@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE projects SET status = 'pending' WHERE status NOT IN ('pending', 'sent', 'in_progress', 'won', 'lost');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute UPDATE projects SET status = 'pending' WHERE status NOT IN ('pending', 'sent', 'in_progress', 'won', 'lost');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1511
+}

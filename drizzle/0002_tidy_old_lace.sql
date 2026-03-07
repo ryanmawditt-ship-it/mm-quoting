@@ -1,0 +1,1 @@
+ALTER TABLE `projects` MODIFY COLUMN `status` enum('pending','sent','in_progress','won','lost') NOT NULL DEFAULT 'pending';

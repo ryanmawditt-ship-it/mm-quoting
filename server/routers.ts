@@ -26,6 +26,7 @@ import {
   getCustomerQuoteLineItems,
   updateLineItemMargin,
   updateLineItemMargins,
+  deleteProject,
 } from "./db";
 
 export const appRouter = router({
@@ -134,10 +135,13 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number(),
-          status: z.enum(["active", "won", "lost", "follow_up_needed"]),
+          status: z.enum(["pending", "sent", "in_progress", "won", "lost"]),
         })
       )
       .mutation(({ input }) => updateProjectStatus(input.id, input.status)),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => deleteProject(input.id)),
   }),
 
   // Supplier Quotes

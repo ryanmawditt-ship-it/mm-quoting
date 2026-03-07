@@ -48,10 +48,11 @@ import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  active: { label: "Active", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Clock },
+  pending: { label: "Pending", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },
+  sent: { label: "Sent", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Clock },
+  in_progress: { label: "In Progress", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Clock },
   won: { label: "Won", color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle2 },
   lost: { label: "Lost", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
-  follow_up_needed: { label: "Follow Up", color: "bg-amber-100 text-amber-700 border-amber-200", icon: AlertCircle },
 };
 
 export default function ProjectDetailPage() {
@@ -224,7 +225,7 @@ export default function ProjectDetailPage() {
             onValueChange={(val) =>
               updateStatus.mutate({
                 id: projectId,
-                status: val as "active" | "won" | "lost" | "follow_up_needed",
+                status: val as "pending" | "sent" | "in_progress" | "won" | "lost",
               })
             }
           >
@@ -232,10 +233,11 @@ export default function ProjectDetailPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="won">Won</SelectItem>
               <SelectItem value="lost">Lost</SelectItem>
-              <SelectItem value="follow_up_needed">Follow Up Needed</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -150,3 +150,8 @@
 - [x] Add status change dropdown/selector on project cards in Projects page
 - [x] Add project delete functionality with confirmation dialog
 - [x] Cascade delete: remove related supplier quotes, line items, and customer quotes
+- [x] Add project_suppliers junction table to track expected suppliers per project
+- [x] Add backend procedures: add supplier to project, remove supplier from project, list project suppliers
+- [x] Auto-detect "pricing received" status by checking if a supplier quote exists for that supplier+project
+- [x] Build supplier tracking UI section in ProjectDetailPage with add/remove and tick/untick indicators
+- [x] Show visual tick (green) for suppliers with uploaded pricing, unticked (amber) for those still pending

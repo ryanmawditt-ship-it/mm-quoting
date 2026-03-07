@@ -1,6 +1,6 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, companySettings, InsertCompanySettings, salespersons, suppliers, projects, supplierQuotes, lineItems, customerQuotes, customerQuoteLineItems } from "../drizzle/schema";
+import { InsertUser, users, companySettings, InsertCompanySettings, salespersons, suppliers, projects, supplierQuotes, lineItems, customerQuotes, customerQuoteLineItems, projectSuppliers } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -173,9 +173,9 @@ export async function createProject(userId: number, name: string, customerName: 
 
 export async function getProjectById(id: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function updateProjectStatus(id: number, status: 'pending' | 'sent' | 'in_progress' | 'won' | 'lost') {
@@ -205,6 +205,9 @@ export async function deleteProject(id: number) {
     // Delete line items
     await db.delete(lineItems).where(inArray(lineItems.supplierQuoteId, sqIds));
   }
+
+  // Delete project suppliers
+  await db.delete(projectSuppliers).where(eq(projectSuppliers.projectId, id));
 
   // Delete customer quotes for this project
   await db.delete(customerQuotes).where(eq(customerQuotes.projectId, id));
@@ -326,6 +329,56 @@ export async function updateLineItemMargins(items: Array<{ id: number; marginPer
   for (const item of items) {
     await db.update(lineItems).set({ markupPercent: item.marginPercent }).where(eq(lineItems.id, item.id));
   }
+}
+
+/**
+ * Project Suppliers - tracking which suppliers are expected to quote on a project
+ */
+export async function getProjectSuppliers(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: projectSuppliers.id,
+    projectId: projectSuppliers.projectId,
+    supplierId: projectSuppliers.supplierId,
+    notes: projectSuppliers.notes,
+    createdAt: projectSuppliers.createdAt,
+    supplierName: suppliers.name,
+    supplierContact: suppliers.contact,
+    supplierEmail: suppliers.email,
+    supplierPhone: suppliers.phone,
+  })
+    .from(projectSuppliers)
+    .innerJoin(suppliers, eq(projectSuppliers.supplierId, suppliers.id))
+    .where(eq(projectSuppliers.projectId, projectId));
+}
+
+export async function addProjectSupplier(projectId: number, supplierId: number, notes?: string) {
+  const db = await getDb();
+  if (!db) return;
+  // Check if already exists
+  const existing = await db.select()
+    .from(projectSuppliers)
+    .where(and(eq(projectSuppliers.projectId, projectId), eq(projectSuppliers.supplierId, supplierId)))
+    .limit(1);
+  if (existing.length > 0) return; // Already tracked
+  await db.insert(projectSuppliers).values({ projectId, supplierId, notes });
+}
+
+export async function removeProjectSupplier(projectId: number, supplierId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(projectSuppliers).where(
+    and(eq(projectSuppliers.projectId, projectId), eq(projectSuppliers.supplierId, supplierId))
+  );
+}
+
+export async function updateProjectSupplierNotes(projectId: number, supplierId: number, notes: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(projectSuppliers).set({ notes }).where(
+    and(eq(projectSuppliers.projectId, projectId), eq(projectSuppliers.supplierId, supplierId))
+  );
 }
 
 // TODO: add additional feature queries as needed

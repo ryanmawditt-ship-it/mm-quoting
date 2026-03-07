@@ -476,6 +476,51 @@ describe("Project Delete", () => {
   });
 });
 
+describe("Project Supplier Tracking", () => {
+  const uniqueId = Date.now();
+  const projectName = `SupTrack-${uniqueId}`;
+  const supplierName = `TrackSup-${uniqueId}`;
+
+  it("adds, deduplicates, and removes project suppliers", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    // Create a fresh project
+    await caller.projects.create({ name: projectName, customerName: "Test" });
+    const projects = await caller.projects.list();
+    const project = projects.find((p) => p.name === projectName);
+    expect(project).toBeDefined();
+    if (!project) return;
+
+    // Create a fresh supplier
+    await caller.suppliers.create({ name: supplierName });
+    const suppliersList = await caller.suppliers.list();
+    const supplier = suppliersList.find((s) => s.name === supplierName);
+    expect(supplier).toBeDefined();
+    if (!supplier) return;
+
+    // Initially empty for this new project
+    const initialList = await caller.projectSuppliers.list({ projectId: project.id });
+    expect(initialList.length).toBe(0);
+
+    // Add supplier to project
+    await caller.projectSuppliers.add({ projectId: project.id, supplierId: supplier.id });
+    const afterAdd = await caller.projectSuppliers.list({ projectId: project.id });
+    expect(afterAdd.length).toBe(1);
+    expect(afterAdd[0].supplierName).toBe(supplierName);
+
+    // Adding same supplier again should not duplicate
+    await caller.projectSuppliers.add({ projectId: project.id, supplierId: supplier.id });
+    const afterDup = await caller.projectSuppliers.list({ projectId: project.id });
+    expect(afterDup.length).toBe(1);
+
+    // Remove the tracked supplier
+    await caller.projectSuppliers.remove({ projectId: project.id, supplierId: supplier.id });
+    const afterRemove = await caller.projectSuppliers.list({ projectId: project.id });
+    expect(afterRemove.length).toBe(0);
+  });
+});
+
 describe("Authentication", () => {
   it("auth.me returns user for authenticated context", async () => {
     const { ctx } = createAuthContext();

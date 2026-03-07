@@ -27,6 +27,10 @@ import {
   updateLineItemMargin,
   updateLineItemMargins,
   deleteProject,
+  getProjectSuppliers,
+  addProjectSupplier,
+  removeProjectSupplier,
+  updateProjectSupplierNotes,
 } from "./db";
 
 export const appRouter = router({
@@ -253,6 +257,45 @@ export const appRouter = router({
         })
       )
       .mutation(({ input }) => updateCustomerQuoteStatus(input.id, input.status)),
+  }),
+
+  // Project Suppliers (tracking which suppliers are expected to quote)
+  projectSuppliers: router({
+    list: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(({ input }) => getProjectSuppliers(input.projectId)),
+    add: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.number(),
+          supplierId: z.number(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(({ input }) =>
+        addProjectSupplier(input.projectId, input.supplierId, input.notes)
+      ),
+    remove: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.number(),
+          supplierId: z.number(),
+        })
+      )
+      .mutation(({ input }) =>
+        removeProjectSupplier(input.projectId, input.supplierId)
+      ),
+    updateNotes: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.number(),
+          supplierId: z.number(),
+          notes: z.string(),
+        })
+      )
+      .mutation(({ input }) =>
+        updateProjectSupplierNotes(input.projectId, input.supplierId, input.notes)
+      ),
   }),
 
   // Customer Quote Line Items

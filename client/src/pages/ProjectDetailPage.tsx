@@ -42,6 +42,11 @@ import {
   Phone,
   MapPin,
   StickyNote,
+  Plus,
+  X,
+  Package,
+  CircleDashed,
+  CircleCheck,
 } from "lucide-react";
 import { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -65,6 +70,7 @@ export default function ProjectDetailPage() {
   const { data: customerQuotes } = trpc.customerQuotes.getByProject.useQuery({ projectId });
   const { data: suppliers } = trpc.suppliers.list.useQuery();
   const { data: salespersons } = trpc.salespersons.list.useQuery();
+  const { data: projectSuppliersData } = trpc.projectSuppliers.list.useQuery({ projectId });
   const utils = trpc.useUtils();
 
   const updateStatus = trpc.projects.updateStatus.useMutation({
@@ -74,6 +80,80 @@ export default function ProjectDetailPage() {
       toast.success("Project status updated");
     },
   });
+
+  // Project supplier tracking
+  const [addSupplierOpen, setAddSupplierOpen] = useState(false);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const [newSupplierName, setNewSupplierName] = useState("");
+
+  const addProjectSupplier = trpc.projectSuppliers.add.useMutation({
+    onSuccess: () => {
+      utils.projectSuppliers.list.invalidate({ projectId });
+      setAddSupplierOpen(false);
+      setSelectedSupplierId("");
+      setNewSupplierName("");
+      toast.success("Supplier added to project");
+    },
+    onError: () => toast.error("Failed to add supplier"),
+  });
+
+  const removeProjectSupplier = trpc.projectSuppliers.remove.useMutation({
+    onSuccess: () => {
+      utils.projectSuppliers.list.invalidate({ projectId });
+      toast.success("Supplier removed from project");
+    },
+    onError: () => toast.error("Failed to remove supplier"),
+  });
+
+  const createSupplierMutation = trpc.suppliers.create.useMutation({
+    onSuccess: () => {
+      utils.suppliers.list.invalidate();
+    },
+  });
+
+  // Determine which tracked suppliers have received pricing (have a supplier quote uploaded)
+  const trackedSuppliersWithStatus = useMemo(() => {
+    if (!projectSuppliersData) return [];
+    return projectSuppliersData.map((ps) => {
+      const hasQuote = (supplierQuotes || []).some(
+        (sq) => sq.supplierId === ps.supplierId
+      );
+      return { ...ps, hasQuote };
+    });
+  }, [projectSuppliersData, supplierQuotes]);
+
+  // Suppliers available to add (not already tracked)
+  const availableSuppliers = useMemo(() => {
+    if (!suppliers || !projectSuppliersData) return suppliers || [];
+    const trackedIds = new Set(projectSuppliersData.map((ps) => ps.supplierId));
+    return suppliers.filter((s) => !trackedIds.has(s.id));
+  }, [suppliers, projectSuppliersData]);
+
+  const handleAddExistingSupplier = () => {
+    if (!selectedSupplierId) return;
+    addProjectSupplier.mutate({
+      projectId,
+      supplierId: parseInt(selectedSupplierId),
+    });
+  };
+
+  const handleAddNewSupplier = async () => {
+    if (!newSupplierName.trim()) return;
+    try {
+      await createSupplierMutation.mutateAsync({ name: newSupplierName.trim() });
+      // After creating, find the new supplier and add to project
+      const updatedSuppliers = await utils.suppliers.list.fetch();
+      const newSup = updatedSuppliers.find(
+        (s) => s.name.toLowerCase() === newSupplierName.trim().toLowerCase()
+      );
+      if (newSup) {
+        addProjectSupplier.mutate({ projectId, supplierId: newSup.id });
+      }
+      setNewSupplierName("");
+    } catch {
+      toast.error("Failed to create supplier");
+    }
+  };
 
   // Upload & extraction state
   const [uploading, setUploading] = useState(false);
@@ -270,6 +350,159 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Supplier Tracking */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Supplier Tracking
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Track which suppliers you&apos;re expecting quotes from.
+                {trackedSuppliersWithStatus.length > 0 && (
+                  <span className="ml-1">
+                    {trackedSuppliersWithStatus.filter((s) => s.hasQuote).length}/
+                    {trackedSuppliersWithStatus.length} pricing received
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Dialog open={addSupplierOpen} onOpenChange={setAddSupplierOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Add Supplier
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Supplier to Project</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-2">
+                  {availableSuppliers.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Select Existing Supplier</Label>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedSupplierId}
+                          onValueChange={setSelectedSupplierId}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Choose a supplier..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableSuppliers.map((s) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={handleAddExistingSupplier}
+                          disabled={!selectedSupplierId || addProjectSupplier.isPending}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <Separator />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">or</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Create New Supplier</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Supplier name..."
+                        value={newSupplierName}
+                        onChange={(e) => setNewSupplierName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddNewSupplier()}
+                      />
+                      <Button
+                        onClick={handleAddNewSupplier}
+                        disabled={!newSupplierName.trim() || createSupplierMutation.isPending}
+                      >
+                        Create & Add
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {trackedSuppliersWithStatus.length === 0 ? (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              <CircleDashed className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              No suppliers tracked yet. Add suppliers you&apos;re expecting quotes from.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {trackedSuppliersWithStatus.map((ps) => (
+                <div
+                  key={ps.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                    ps.hasQuote
+                      ? "bg-green-50 border-green-200"
+                      : "bg-amber-50 border-amber-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {ps.hasQuote ? (
+                      <CircleCheck className="h-5 w-5 text-green-600 shrink-0" />
+                    ) : (
+                      <CircleDashed className="h-5 w-5 text-amber-500 shrink-0" />
+                    )}
+                    <div>
+                      <p className="font-medium text-sm">{ps.supplierName}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        {ps.supplierContact && <span>{ps.supplierContact}</span>}
+                        {ps.supplierEmail && <span>{ps.supplierEmail}</span>}
+                        {ps.supplierPhone && <span>{ps.supplierPhone}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${
+                        ps.hasQuote
+                          ? "bg-green-100 text-green-700 border-green-300"
+                          : "bg-amber-100 text-amber-700 border-amber-300"
+                      }`}
+                    >
+                      {ps.hasQuote ? "Pricing Received" : "Awaiting Pricing"}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() =>
+                        removeProjectSupplier.mutate({
+                          projectId,
+                          supplierId: ps.supplierId,
+                        })
+                      }
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Main Tabs */}
       <Tabs defaultValue="supplier-quotes" className="space-y-4">

@@ -178,3 +178,19 @@ export const customerQuoteLineItems = mysqlTable("customer_quote_line_items", {
 
 export type CustomerQuoteLineItem = typeof customerQuoteLineItems.$inferSelect;
 export type InsertCustomerQuoteLineItem = typeof customerQuoteLineItems.$inferInsert;
+
+/**
+ * Project Suppliers - tracks which suppliers are expected to provide quotes for each project.
+ * The "pricing received" status is derived automatically by checking if a supplier_quote
+ * exists for the same project + supplier combination.
+ */
+export const projectSuppliers = mysqlTable("project_suppliers", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull().references(() => projects.id),
+  supplierId: int("supplierId").notNull().references(() => suppliers.id),
+  notes: text("notes"), // Optional notes about what this supplier is quoting
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProjectSupplier = typeof projectSuppliers.$inferSelect;
+export type InsertProjectSupplier = typeof projectSuppliers.$inferInsert;

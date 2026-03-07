@@ -20,6 +20,7 @@ import {
   getCustomerQuoteLineItems,
   getCustomerQuoteById,
   getSalespersons,
+  addProjectSupplier,
 } from "./db";
 import PDFDocument from "pdfkit";
 
@@ -79,43 +80,59 @@ apiRouter.post("/api/upload-supplier-pdf", upload.single("file"), async (req: Re
       messages: [
         {
           role: "system",
-          content: `You are a data extraction specialist. Extract all line items AND supplier company information from the supplier quote PDF.
+          content: `You are an expert data extraction specialist for Australian electrical supplier quotes. Your job is to extract EVERY line item and supplier information from supplier quote PDFs with perfect accuracy.
 
-For the supplier, extract:
-- supplierName: the name of the company that issued this quote
-- supplierContact: contact person name if available
-- supplierEmail: email address if available
-- supplierPhone: phone number if available
+You will encounter quotes from various Australian electrical suppliers. Here are known formats you must handle:
 
-For each line item, extract:
-- itemNumber: the sequential number (integer)
-- type: the item type code (e.g., "AH1 BULB", "AL3", etc.)
-- productCode: the product/part code
-- description: the FULL and COMPLETE product description exactly as written. Include all technical specifications, model details, colour temperatures, wattages, dimensions, finishes, and any other details. Do NOT truncate or summarise.
-- quantity: number of units (integer)
-- unitPrice: unit price as a number (no currency symbols)
-- leadTimeDays: lead time in days. Look carefully for this information — it may appear:
-  * Per line item in a "Lead Time" or "LT" column
-  * In a general note/footer like "Lead time: 4-6 weeks" or "Delivery: 14 days"
-  * As "ex-stock", "in stock" (use 0 days), or "indent" / "made to order"
-  * Convert weeks to days (1 week = 7 days). If a range like "4-6 weeks" is given, use the higher number (42 days)
-  * If no lead time info exists at all for an item, use null
-- unitOfMeasure: unit of measure (default "EA")
+**RAYLINC AGENCIES PTY LTD:**
+- Columns: Product Code | Type | Description | Quantity | Price Ex GST | Total Ex GST
+- "Type" column contains area/section codes like PL1, 1S, 2S — these identify which area of the project the item belongs to
+- CRITICAL: Some items have NO unit price shown (e.g., poles, powdercoat, foundation cages). These are BUNDLED items included in the price of the main luminaire. Extract them with unitPrice=0 and set isBundled=true
+- Page 1 often contains **QUOTE_NOTES** and **NOTE** sections — these are NOT line items, do NOT extract them as items
+- Actual product line items start with a product code like "108-1554", "STM-RP-5.0-160-90-PC", "FC-4M20-233X1.0-K", "FREIGHT"
+- Freight is always a separate line item
+- Validity: 30 days (stated in notes)
 
-Also extract:
-- quoteNumber: the supplier's quote reference number
-- quoteDate: the date of the quote (ISO format)
-- generalLeadTimeDays: if there is a blanket/general lead time mentioned for all items (e.g., in the footer or notes section), extract it here as an integer in days. Otherwise null.
-- deliveryNotes: any delivery or freight notes mentioned in the quote (e.g., "Free delivery to site", "Freight extra", etc.). Otherwise null.
+**LUXSON ILLUMINATION:**
+- Columns: Product name and additional info | Qty | Price | Unit | Sum
+- Items grouped under bold section headers like "TYPE W2", "FREIGHT" — these headers have section subtotals
+- Section headers are NOT line items — only extract actual products under them
+- The section header name (e.g., "TYPE W2") should be used as the "type" field for items under it
+- CRITICAL: Uses space-separated thousands in numbers (e.g., "5 393.29" means 5393.29, "4 541.46" means 4541.46). Parse these correctly!
+- Product code is on the first line, description on the second line of each item
+- "Unit" column values like "Pce", "Per Delivery" map to unitOfMeasure
+- Validity: 30 days
+- Lead times in T&Cs: local 4-6 weeks, imported 10-12 weeks
 
-Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
+**CLEVERTRONICS:**
+- Columns: Type Number | Product Code | Item Description | Comments | Qty | Unit Price | Extended Price
+- "Type Number" contains fixture type codes like 2S, 1E, 2E, 3E/4E, 5E, 6E
+- Has a "Comments" column with per-item notes (IK ratings, special requests like "As requested in take off")
+- CRITICAL: Some items may have quantity=0 with $0.00 total — these are informational/optional items. Still extract them.
+- Has explicit Quote Expiry date (e.g., 90 days from quote date)
+- "Opp Name" = project name, "Quote Name" = revision info
+- Lead times in notes section
+
+**GENERAL RULES FOR ALL SUPPLIERS:**
+1. Extract EVERY product line item — do not skip any
+2. Do NOT extract notes, terms & conditions, or section headers as line items
+3. For descriptions: include the FULL and COMPLETE text exactly as written. Include ALL technical specs, model details, colour temps, wattages, dimensions, finishes. Do NOT truncate or summarise.
+4. For numbers: handle comma-separated (2,950.00), space-separated (5 393.29), and plain formats. Strip currency symbols ($, AUD). Always return clean decimal numbers.
+5. If an item has a "Total" or "Extended Price" but no unit price, calculate: unitPrice = total / quantity. If quantity is 0, use the total as unitPrice.
+6. Items with no price at all (bundled accessories) should have unitPrice=0 and isBundled=true
+7. Lead times: check per-item columns, general notes, footer, and T&Cs. Convert weeks to days (1 week = 7 days). For ranges like "4-6 weeks", use the higher number (42). "Ex-stock" or "in stock" = 0 days.
+8. Quote validity: extract explicit expiry dates, or note the validity period in days (30, 60, 90 days)
+9. Freight/delivery items are real line items — extract them with type="FREIGHT"
+10. For the supplier name, use the FULL legal company name as shown on the quote header
+
+Return ONLY valid JSON matching the schema. Do not include markdown formatting or code blocks.`,
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Extract all line items and supplier information from this supplier quote PDF. Return the data as JSON.",
+              text: "Extract all line items and supplier information from this supplier quote PDF. Be thorough — extract every single product line item, including freight, bundled items, and zero-quantity items. Pay special attention to number formatting (spaces vs commas as thousands separators).",
             },
             {
               type: "file_url",
@@ -135,34 +152,44 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
           schema: {
             type: "object",
             properties: {
-              supplierName: { type: "string", description: "Name of the supplier company" },
-              supplierContact: { type: ["string", "null"], description: "Contact person name" },
-              supplierEmail: { type: ["string", "null"], description: "Supplier email" },
-              supplierPhone: { type: ["string", "null"], description: "Supplier phone" },
+              supplierName: { type: "string", description: "Full legal name of the supplier company" },
+              supplierContact: { type: ["string", "null"], description: "Contact person name (e.g., sales rep, quoted by)" },
+              supplierEmail: { type: ["string", "null"], description: "Supplier email address" },
+              supplierPhone: { type: ["string", "null"], description: "Supplier phone number" },
+              supplierAbn: { type: ["string", "null"], description: "Supplier ABN if shown" },
               quoteNumber: { type: ["string", "null"], description: "Supplier quote reference number" },
-              quoteDate: { type: ["string", "null"], description: "Quote date in ISO format" },
+              quoteDate: { type: ["string", "null"], description: "Quote date in ISO format (YYYY-MM-DD)" },
+              quoteExpiryDate: { type: ["string", "null"], description: "Quote expiry date in ISO format if explicitly stated" },
+              validityDays: { type: ["number", "null"], description: "Number of days the quote is valid (e.g., 30, 60, 90)" },
+              projectName: { type: ["string", "null"], description: "Project name as shown on the quote" },
               lineItems: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
-                    itemNumber: { type: ["number", "null"] },
-                    type: { type: ["string", "null"] },
-                    productCode: { type: "string" },
-                    description: { type: "string" },
-                    quantity: { type: "number" },
-                    unitPrice: { type: "number" },
-                    leadTimeDays: { type: ["number", "null"] },
-                    unitOfMeasure: { type: "string" },
+                    itemNumber: { type: ["number", "null"], description: "Sequential item number" },
+                    type: { type: ["string", "null"], description: "Area/section/type code (e.g., PL1, 1S, 2S, TYPE W2, 1E, FREIGHT)" },
+                    productCode: { type: "string", description: "Product/part code" },
+                    description: { type: "string", description: "Full product description with all specs" },
+                    comments: { type: ["string", "null"], description: "Per-item notes or comments (e.g., IK ratings, special requests)" },
+                    quantity: { type: "number", description: "Number of units (can be 0 for informational items)" },
+                    unitPrice: { type: "number", description: "Unit price as a decimal number (0 for bundled items with no separate price)" },
+                    totalPrice: { type: ["number", "null"], description: "Extended/total price if shown on the quote" },
+                    isBundled: { type: "boolean", description: "True if this item has no separate price and is bundled/included with another item" },
+                    leadTimeDays: { type: ["number", "null"], description: "Item-specific lead time in days" },
+                    unitOfMeasure: { type: "string", description: "Unit of measure (EA, Pce, m, Per Delivery, etc.)" },
                   },
-                  required: ["productCode", "description", "quantity", "unitPrice", "unitOfMeasure"],
+                  required: ["productCode", "description", "quantity", "unitPrice", "unitOfMeasure", "isBundled"],
                   additionalProperties: false,
                 },
               },
-              generalLeadTimeDays: { type: ["number", "null"], description: "Blanket lead time for all items if mentioned" },
-              deliveryNotes: { type: ["string", "null"], description: "Delivery or freight notes" },
+              generalLeadTimeDays: { type: ["number", "null"], description: "Blanket lead time for all items in days" },
+              deliveryNotes: { type: ["string", "null"], description: "Delivery/freight terms and notes" },
+              subtotalExGst: { type: ["number", "null"], description: "Subtotal excluding GST" },
+              gstAmount: { type: ["number", "null"], description: "GST amount" },
+              totalIncGst: { type: ["number", "null"], description: "Total including GST" },
             },
-            required: ["supplierName", "supplierContact", "supplierEmail", "supplierPhone", "quoteNumber", "quoteDate", "lineItems", "generalLeadTimeDays", "deliveryNotes"],
+            required: ["supplierName", "supplierContact", "supplierEmail", "supplierPhone", "supplierAbn", "quoteNumber", "quoteDate", "quoteExpiryDate", "validityDays", "projectName", "lineItems", "generalLeadTimeDays", "deliveryNotes", "subtotalExGst", "gstAmount", "totalIncGst"],
             additionalProperties: false,
           },
         },
@@ -178,11 +205,35 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
       extracted = JSON.parse(cleaned);
     } catch (parseError) {
       console.error("[Extraction] Failed to parse LLM response:", parseError);
-      res.status(500).json({ error: "Failed to parse extracted data from PDF" });
+      console.error("[Extraction] Raw content:", extractionResult.choices[0]?.message?.content);
+      res.status(500).json({ error: "Failed to parse extracted data from PDF. The AI could not read this document format. Please try again or contact support." });
       return;
     }
 
-    // 3. Auto-create or find the supplier from extracted info
+    // Validate extraction has at least some data
+    if (!extracted.lineItems || !Array.isArray(extracted.lineItems) || extracted.lineItems.length === 0) {
+      console.warn("[Extraction] No line items found in extraction result");
+      res.status(422).json({
+        error: "No line items could be extracted from this PDF. The document may not be a recognisable supplier quote format.",
+        supplierName: extracted.supplierName || null,
+        quoteNumber: extracted.quoteNumber || null,
+      });
+      return;
+    }
+
+    // 3. Sanitise extracted numbers — handle space-separated thousands, currency symbols, etc.
+    const sanitiseNumber = (val: any): number => {
+      if (typeof val === "number") return val;
+      if (typeof val === "string") {
+        // Remove currency symbols, AUD prefix, and whitespace used as thousands separator
+        const cleaned = val.replace(/[\$AUD]/gi, "").replace(/(\d)\s+(\d)/g, "$1$2").replace(/,/g, "").trim();
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      }
+      return 0;
+    };
+
+    // 4. Auto-create or find the supplier from extracted info
     const supplierName = extracted.supplierName || "Unknown Supplier";
     const supplierId = await getOrCreateSupplierByName(
       user.id,
@@ -192,13 +243,34 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
       extracted.supplierPhone || undefined
     );
 
-    // 4. Create supplier quote record
+    // 5. Auto-add this supplier to the project's tracked suppliers list
+    try {
+      await addProjectSupplier(parseInt(projectId), supplierId);
+    } catch (e) {
+      // Non-critical — supplier tracking is a convenience feature
+      console.warn("[Upload] Could not auto-track supplier:", e);
+    }
+
+    // 6. Calculate quote expiry
+    let quoteExpiry: Date | undefined;
+    const validityDays = extracted.validityDays || null;
+    if (extracted.quoteExpiryDate) {
+      quoteExpiry = new Date(extracted.quoteExpiryDate);
+    } else if (extracted.quoteDate && validityDays) {
+      quoteExpiry = new Date(extracted.quoteDate);
+      quoteExpiry.setDate(quoteExpiry.getDate() + validityDays);
+    }
+
+    // 7. Create supplier quote record with enriched data
     await createSupplierQuote(
       parseInt(projectId),
       supplierId,
       extracted.quoteNumber || undefined,
       extracted.quoteDate ? new Date(extracted.quoteDate) : undefined,
-      pdfUrl
+      pdfUrl,
+      quoteExpiry,
+      validityDays,
+      extracted.deliveryNotes || undefined
     );
 
     // Get the inserted ID
@@ -213,36 +285,51 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
     // Use general lead time as fallback for items without specific lead times
     const generalLT = extracted.generalLeadTimeDays || null;
 
-    // 5. Save extracted line items to database
+    // 8. Save extracted line items to database with enriched data
     const savedItems: any[] = [];
-    if (extracted.lineItems && Array.isArray(extracted.lineItems)) {
-      for (const item of extracted.lineItems) {
-        // Use item-specific lead time, or fall back to general lead time
-        const itemLeadTime = item.leadTimeDays ?? generalLT;
+    let itemIdx = 0;
+    for (const item of extracted.lineItems) {
+      itemIdx++;
+      // Use item-specific lead time, or fall back to general lead time
+      const itemLeadTime = item.leadTimeDays ?? generalLT;
+      const unitPrice = sanitiseNumber(item.unitPrice);
+      const totalPrice = item.totalPrice != null ? sanitiseNumber(item.totalPrice) : null;
+      const quantity = typeof item.quantity === "number" ? item.quantity : parseInt(item.quantity) || 0;
+      const isBundled = item.isBundled === true || (unitPrice === 0 && quantity > 0 && !item.productCode?.toUpperCase().includes("FREIGHT"));
 
-        await createLineItem(
-          supplierQuote.id,
-          item.productCode || "UNKNOWN",
-          item.description || "",
-          item.quantity || 1,
-          String(item.unitPrice || 0),
-          item.itemNumber,
-          item.type,
-          item.unitOfMeasure || "EA",
-          itemLeadTime,
-          undefined
-        );
-        savedItems.push({
-          type: item.type,
-          productCode: item.productCode,
-          description: item.description,
-          quantity: item.quantity,
-          costPrice: String(item.unitPrice),
-          leadTimeDays: itemLeadTime,
-          unitOfMeasure: item.unitOfMeasure,
-        });
-      }
+      await createLineItem(
+        supplierQuote.id,
+        item.productCode || "UNKNOWN",
+        item.description || "",
+        quantity,
+        String(unitPrice),
+        item.itemNumber ?? itemIdx,
+        item.type || null,
+        item.unitOfMeasure || "EA",
+        itemLeadTime,
+        undefined, // markupPercent
+        item.comments || null,
+        totalPrice != null ? String(totalPrice) : undefined,
+        isBundled
+      );
+      savedItems.push({
+        type: item.type,
+        productCode: item.productCode,
+        description: item.description,
+        comments: item.comments || null,
+        quantity,
+        costPrice: String(unitPrice),
+        totalPrice: totalPrice != null ? String(totalPrice) : null,
+        isBundled,
+        leadTimeDays: itemLeadTime,
+        unitOfMeasure: item.unitOfMeasure,
+      });
     }
+
+    // 9. Build summary for response
+    const bundledCount = savedItems.filter(i => i.isBundled).length;
+    const pricedCount = savedItems.filter(i => !i.isBundled && parseFloat(i.costPrice) > 0).length;
+    const zeroQtyCount = savedItems.filter(i => i.quantity === 0).length;
 
     res.json({
       success: true,
@@ -251,14 +338,23 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`,
       supplierId,
       quoteNumber: extracted.quoteNumber,
       quoteDate: extracted.quoteDate,
+      quoteExpiryDate: quoteExpiry?.toISOString() || null,
+      validityDays,
+      projectName: extracted.projectName || null,
       generalLeadTimeDays: generalLT,
       deliveryNotes: extracted.deliveryNotes || null,
+      subtotalExGst: extracted.subtotalExGst || null,
+      gstAmount: extracted.gstAmount || null,
+      totalIncGst: extracted.totalIncGst || null,
       extractedItems: savedItems,
       itemCount: savedItems.length,
+      pricedCount,
+      bundledCount,
+      zeroQtyCount,
     });
   } catch (error) {
     console.error("[Upload] Error:", error);
-    res.status(500).json({ error: "Failed to process supplier quote PDF" });
+    res.status(500).json({ error: "Failed to process supplier quote PDF. Please try again." });
   }
 });
 

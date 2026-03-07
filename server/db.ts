@@ -222,10 +222,10 @@ export async function deleteProject(id: number) {
 /**
  * Supplier Quotes
  */
-export async function createSupplierQuote(projectId: number, supplierId: number, quoteNumber?: string, quoteDate?: Date, pdfUrl?: string) {
+export async function createSupplierQuote(projectId: number, supplierId: number, quoteNumber?: string, quoteDate?: Date, pdfUrl?: string, quoteExpiry?: Date, validityDays?: number, deliveryNotes?: string) {
   const db = await getDb();
   if (!db) return;
-  const result = await db.insert(supplierQuotes).values({ projectId, supplierId, quoteNumber, quoteDate, pdfUrl });
+  const result = await db.insert(supplierQuotes).values({ projectId, supplierId, quoteNumber, quoteDate, pdfUrl, quoteExpiry, validityDays, deliveryNotes });
   return result;
 }
 
@@ -245,10 +245,16 @@ export async function getSupplierQuoteById(id: number) {
 /**
  * Line Items
  */
-export async function createLineItem(supplierQuoteId: number, productCode: string, description: string, quantity: number, costPrice: string | number, itemNumber?: number, type?: string, unitOfMeasure?: string, leadTimeDays?: number, markupPercent?: number) {
+export async function createLineItem(supplierQuoteId: number, productCode: string, description: string, quantity: number, costPrice: string | number, itemNumber?: number, type?: string, unitOfMeasure?: string, leadTimeDays?: number, markupPercent?: number, comments?: string, totalPrice?: string | number, isBundled?: boolean) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(lineItems).values({ supplierQuoteId, itemNumber, type, productCode, description, quantity, unitOfMeasure, costPrice: String(costPrice), leadTimeDays, markupPercent });
+  await db.insert(lineItems).values({
+    supplierQuoteId, itemNumber, type, productCode, description, comments,
+    quantity, unitOfMeasure, costPrice: String(costPrice),
+    totalPrice: totalPrice != null ? String(totalPrice) : undefined,
+    isBundled: isBundled ? 1 : 0,
+    leadTimeDays, markupPercent,
+  });
 }
 
 export async function getLineItemsBySupplierQuote(supplierQuoteId: number) {

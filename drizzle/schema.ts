@@ -107,6 +107,9 @@ export const supplierQuotes = mysqlTable("supplier_quotes", {
   supplierId: int("supplierId").notNull().references(() => suppliers.id),
   quoteNumber: varchar("quoteNumber", { length: 100 }),
   quoteDate: timestamp("quoteDate"),
+  quoteExpiry: timestamp("quoteExpiry"), // When the quote expires
+  validityDays: int("validityDays"), // Number of days the quote is valid
+  deliveryNotes: text("deliveryNotes"), // Freight/delivery terms extracted from the quote
   pdfUrl: text("pdfUrl"), // CDN URL to uploaded PDF
   extractedAt: timestamp("extractedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -123,12 +126,15 @@ export const lineItems = mysqlTable("line_items", {
   id: int("id").autoincrement().primaryKey(),
   supplierQuoteId: int("supplierQuoteId").notNull().references(() => supplierQuotes.id),
   itemNumber: int("itemNumber"), // Sequential number from supplier quote
-  type: varchar("type", { length: 100 }), // e.g., "AH1 BULB", "AL3", etc.
+  type: varchar("type", { length: 100 }), // Area/section/type code from the quote (e.g., "PL1", "1S", "2S", "1E", "TYPE W2")
   productCode: varchar("productCode", { length: 255 }).notNull(),
   description: text("description"),
+  comments: text("comments"), // Per-item notes/comments from the supplier (e.g., IK ratings, special requests)
   quantity: int("quantity").notNull(),
   unitOfMeasure: varchar("unitOfMeasure", { length: 50 }).default("EA"), // EA, m, box, etc.
   costPrice: decimal("costPrice", { precision: 12, scale: 4 }).notNull(), // Supplier unit price (never shown to customer)
+  totalPrice: decimal("totalPrice", { precision: 12, scale: 4 }), // Extended/total price if different from qty * unit
+  isBundled: int("isBundled").default(0), // 1 if this item has no separate price (bundled with another item)
   leadTimeDays: int("leadTimeDays"), // Lead time in days
   markupPercent: int("markupPercent"), // Per-line-item markup override (null = use supplier default or global)
   createdAt: timestamp("createdAt").defaultNow().notNull(),

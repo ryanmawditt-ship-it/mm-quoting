@@ -155,3 +155,15 @@
 - [x] Auto-detect "pricing received" status by checking if a supplier quote exists for that supplier+project
 - [x] Build supplier tracking UI section in ProjectDetailPage with add/remove and tick/untick indicators
 - [x] Show visual tick (green) for suppliers with uploaded pricing, unticked (amber) for those still pending
+- [x] Improve AI extraction prompt to handle Raylinc, Luxson, and Clevertronics formats
+- [x] Handle items with no unit price (Raylinc bundled items) — extract as $0 or flag
+- [x] Handle space-separated numbers (Luxson format: 5 393.29)
+- [x] Extract section/type groupings (TYPE W2, PL1, 1S, 2S, etc.) into a type/group field
+- [x] Extract per-item comments/notes (Clevertronics Comments column)
+- [x] Extract quote expiry/validity date when available
+- [x] Handle zero-quantity items (Clevertronics optional items)
+- [x] Distinguish section headers from actual line items
+- [x] Extract lead times from both per-item and document-level notes
+- [x] Improve number parsing robustness (commas, spaces, currency symbols)
+- [x] Better error handling and user feedback for extraction failures
+- [x] Auto-add tracked supplier when a quote PDF is uploaded for a project

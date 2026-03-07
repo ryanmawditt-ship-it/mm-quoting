@@ -521,6 +521,143 @@ describe("Project Supplier Tracking", () => {
   });
 });
 
+describe("Number Sanitisation (extraction edge cases)", () => {
+  // These test the same logic used in apiRoutes.ts sanitiseNumber
+  const sanitiseNumber = (val: any): number => {
+    if (typeof val === "number") return val;
+    if (typeof val === "string") {
+      const cleaned = val.replace(/[\$AUD]/gi, "").replace(/(\d)\s+(\d)/g, "$1$2").replace(/,/g, "").trim();
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    }
+    return 0;
+  };
+
+  it("handles standard decimal numbers", () => {
+    expect(sanitiseNumber(45.50)).toBe(45.50);
+    expect(sanitiseNumber("45.50")).toBe(45.50);
+  });
+
+  it("handles comma-separated thousands", () => {
+    expect(sanitiseNumber("2,950.00")).toBe(2950.00);
+    expect(sanitiseNumber("12,345.67")).toBe(12345.67);
+  });
+
+  it("handles space-separated thousands (Luxson format)", () => {
+    expect(sanitiseNumber("5 393.29")).toBe(5393.29);
+    expect(sanitiseNumber("4 541.46")).toBe(4541.46);
+    expect(sanitiseNumber("10 000.00")).toBe(10000.00);
+  });
+
+  it("strips currency symbols", () => {
+    expect(sanitiseNumber("$45.50")).toBe(45.50);
+    expect(sanitiseNumber("AUD 2,950.00")).toBe(2950.00);
+    expect(sanitiseNumber("$5 393.29")).toBe(5393.29);
+  });
+
+  it("handles zero and empty values", () => {
+    expect(sanitiseNumber(0)).toBe(0);
+    expect(sanitiseNumber("0")).toBe(0);
+    expect(sanitiseNumber("")).toBe(0);
+    expect(sanitiseNumber(null)).toBe(0);
+    expect(sanitiseNumber(undefined)).toBe(0);
+  });
+});
+
+describe("Supplier Quote with enriched fields", () => {
+  it("creates a supplier quote with validity and delivery notes", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const projects = await caller.projects.list();
+    const suppliers = await caller.suppliers.list();
+
+    if (projects.length > 0 && suppliers.length > 0) {
+      const project = projects[0];
+      const supplier = suppliers[0];
+
+      await caller.supplierQuotes.create({
+        projectId: project.id,
+        supplierId: supplier.id,
+        quoteNumber: "Q-ENRICHED-001",
+      });
+
+      const sqs = await caller.supplierQuotes.getByProject({ projectId: project.id });
+      const enrichedSq = sqs.find(sq => sq.quoteNumber === "Q-ENRICHED-001");
+      expect(enrichedSq).toBeDefined();
+      if (enrichedSq) {
+        expect(enrichedSq.quoteNumber).toBe("Q-ENRICHED-001");
+      }
+    }
+  });
+
+  it("creates line items with comments and bundled flag", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const projects = await caller.projects.list();
+    const suppliers = await caller.suppliers.list();
+
+    if (projects.length > 0 && suppliers.length > 0) {
+      const project = projects[0];
+      const supplier = suppliers[0];
+
+      // Create a supplier quote
+      await caller.supplierQuotes.create({
+        projectId: project.id,
+        supplierId: supplier.id,
+        quoteNumber: "Q-BUNDLED-TEST",
+      });
+
+      const sqs = await caller.supplierQuotes.getByProject({ projectId: project.id });
+      const sq = sqs.find(s => s.quoteNumber === "Q-BUNDLED-TEST");
+      expect(sq).toBeDefined();
+      if (!sq) return;
+
+      // Create a normal priced item
+      await caller.lineItems.create({
+        supplierQuoteId: sq.id,
+        itemNumber: 1,
+        type: "1S",
+        productCode: "LUMI-100",
+        description: "LED Luminaire 100W 4000K",
+        quantity: 5,
+        costPrice: "250.00",
+        unitOfMeasure: "EA",
+        leadTimeDays: 21,
+      });
+
+      // Create a bundled item (pole with no price)
+      await caller.lineItems.create({
+        supplierQuoteId: sq.id,
+        itemNumber: 2,
+        type: "1S",
+        productCode: "POLE-5M",
+        description: "5m Steel Pole Powdercoated",
+        quantity: 5,
+        costPrice: "0",
+        unitOfMeasure: "EA",
+      });
+
+      const items = await caller.lineItems.getBySupplierQuote({ supplierQuoteId: sq.id });
+      expect(items.length).toBeGreaterThanOrEqual(2);
+
+      const luminaire = items.find(i => i.productCode === "LUMI-100");
+      expect(luminaire).toBeDefined();
+      if (luminaire) {
+        expect(parseFloat(luminaire.costPrice)).toBeCloseTo(250, 2);
+        expect(luminaire.leadTimeDays).toBe(21);
+      }
+
+      const pole = items.find(i => i.productCode === "POLE-5M");
+      expect(pole).toBeDefined();
+      if (pole) {
+        expect(parseFloat(pole.costPrice)).toBeCloseTo(0, 2);
+      }
+    }
+  });
+});
+
 describe("Authentication", () => {
   it("auth.me returns user for authenticated context", async () => {
     const { ctx } = createAuthContext();

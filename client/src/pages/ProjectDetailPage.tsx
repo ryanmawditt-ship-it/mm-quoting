@@ -159,6 +159,7 @@ export default function ProjectDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [extractedItems, setExtractedItems] = useState<any[]>([]);
   const [extractedSupplierName, setExtractedSupplierName] = useState<string>("");
+  const [extractedMeta, setExtractedMeta] = useState<any>(null);
   const [showExtractedPreview, setShowExtractedPreview] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -193,15 +194,35 @@ export default function ProjectDetailPage() {
       if (result.extractedItems && result.extractedItems.length > 0) {
         setExtractedItems(result.extractedItems);
         setExtractedSupplierName(result.supplierName || "Unknown Supplier");
+        setExtractedMeta({
+          quoteNumber: result.quoteNumber,
+          quoteDate: result.quoteDate,
+          quoteExpiryDate: result.quoteExpiryDate,
+          validityDays: result.validityDays,
+          projectName: result.projectName,
+          deliveryNotes: result.deliveryNotes,
+          subtotalExGst: result.subtotalExGst,
+          gstAmount: result.gstAmount,
+          totalIncGst: result.totalIncGst,
+          pricedCount: result.pricedCount,
+          bundledCount: result.bundledCount,
+          zeroQtyCount: result.zeroQtyCount,
+        });
         setShowExtractedPreview(true);
-        toast.success(`Extracted ${result.extractedItems.length} line items from ${result.supplierName || "supplier"}`);
+
+        // Build a detailed success message
+        const parts = [`${result.itemCount} line items extracted from ${result.supplierName || "supplier"}`];
+        if (result.bundledCount > 0) parts.push(`${result.bundledCount} bundled`);
+        if (result.zeroQtyCount > 0) parts.push(`${result.zeroQtyCount} informational`);
+        toast.success(parts.join(" · "));
       } else {
-        toast.error("No line items could be extracted from this PDF");
+        toast.error(result.error || "No line items could be extracted from this PDF");
       }
 
-      // Refresh supplier quotes and suppliers list
+      // Refresh supplier quotes, suppliers list, and tracked suppliers
       utils.supplierQuotes.getByProject.invalidate({ projectId });
       utils.suppliers.list.invalidate();
+      utils.projectSuppliers.list.invalidate({ projectId });
     } catch (error: any) {
       toast.error(error.message || "Failed to upload and extract PDF");
       console.error(error);
@@ -242,7 +263,9 @@ export default function ProjectDetailPage() {
     setShowExtractedPreview(false);
     setExtractedItems([]);
     setExtractedSupplierName("");
+    setExtractedMeta(null);
     utils.supplierQuotes.getByProject.invalidate({ projectId });
+    utils.projectSuppliers.list.invalidate({ projectId });
     toast.success("Line items saved successfully");
   };
 
@@ -585,8 +608,26 @@ export default function ProjectDetailPage() {
                   <Eye className="h-4 w-4" />
                   Extracted from: {extractedSupplierName}
                 </CardTitle>
-                <CardDescription>
-                  {extractedItems.length} line items extracted. Review below and click "Confirm" to save.
+                <CardDescription className="space-y-1">
+                  <span className="block">
+                    {extractedItems.length} line items extracted
+                    {extractedMeta?.bundledCount > 0 && ` (${extractedMeta.bundledCount} bundled)`}
+                    {extractedMeta?.zeroQtyCount > 0 && ` (${extractedMeta.zeroQtyCount} informational)`}
+                    . Review below and click "Confirm" to save.
+                  </span>
+                  {/* Quote metadata summary */}
+                  <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                    {extractedMeta?.quoteNumber && <span>Quote #: <strong>{extractedMeta.quoteNumber}</strong></span>}
+                    {extractedMeta?.quoteDate && <span>Date: <strong>{new Date(extractedMeta.quoteDate).toLocaleDateString()}</strong></span>}
+                    {extractedMeta?.validityDays && <span>Valid: <strong>{extractedMeta.validityDays} days</strong></span>}
+                    {extractedMeta?.subtotalExGst != null && <span>Subtotal: <strong>${Number(extractedMeta.subtotalExGst).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>}
+                    {extractedMeta?.totalIncGst != null && <span>Total inc GST: <strong>${Number(extractedMeta.totalIncGst).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>}
+                  </span>
+                  {extractedMeta?.deliveryNotes && (
+                    <span className="flex items-center gap-1 text-xs">
+                      <Truck className="h-3 w-3" /> {extractedMeta.deliveryNotes}
+                    </span>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -594,29 +635,67 @@ export default function ProjectDetailPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left">
-                        <th className="pb-2 pr-4 font-medium text-muted-foreground">#</th>
-                        <th className="pb-2 pr-4 font-medium text-muted-foreground">Type</th>
-                        <th className="pb-2 pr-4 font-medium text-muted-foreground">Product Code</th>
-                        <th className="pb-2 pr-4 font-medium text-muted-foreground">Description</th>
-                        <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Qty</th>
-                        <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Unit Price</th>
-                        <th className="pb-2 font-medium text-muted-foreground text-right">LT Days</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground">#</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground">Type</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground">Product Code</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground">Description</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Qty</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Unit Price</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">Total</th>
+                        <th className="pb-2 pr-3 font-medium text-muted-foreground text-right">LT Days</th>
+                        <th className="pb-2 font-medium text-muted-foreground">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {extractedItems.map((item, idx) => (
-                        <tr key={idx} className="border-b last:border-0">
-                          <td className="py-2 pr-4 text-muted-foreground">{idx + 1}</td>
-                          <td className="py-2 pr-4">{item.type || "-"}</td>
-                          <td className="py-2 pr-4 font-mono text-xs">{item.productCode}</td>
-                          <td className="py-2 pr-4 max-w-xs truncate">{item.description}</td>
-                          <td className="py-2 pr-4 text-right">{item.quantity}</td>
-                          <td className="py-2 pr-4 text-right font-mono">
-                            ${parseFloat(item.costPrice).toFixed(2)}
-                          </td>
-                          <td className="py-2 text-right">{item.leadTimeDays || "-"}</td>
-                        </tr>
-                      ))}
+                      {extractedItems.map((item, idx) => {
+                        const unitPrice = parseFloat(item.costPrice) || 0;
+                        const totalPrice = item.totalPrice ? parseFloat(item.totalPrice) : unitPrice * (item.quantity || 0);
+                        const isBundled = item.isBundled;
+                        const isZeroQty = item.quantity === 0;
+                        return (
+                          <tr key={idx} className={`border-b last:border-0 ${isBundled ? "bg-muted/30" : ""} ${isZeroQty ? "opacity-60" : ""}`}>
+                            <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
+                            <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
+                            <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
+                            <td className="py-2 pr-3 max-w-xs">
+                              <span className="block truncate" title={item.description}>{item.description}</span>
+                              {item.comments && (
+                                <span className="block text-xs text-muted-foreground italic mt-0.5" title={item.comments}>
+                                  {item.comments}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2 pr-3 text-right">{item.quantity}</td>
+                            <td className="py-2 pr-3 text-right font-mono">
+                              {isBundled ? (
+                                <span className="text-muted-foreground">incl.</span>
+                              ) : (
+                                `$${unitPrice.toFixed(2)}`
+                              )}
+                            </td>
+                            <td className="py-2 pr-3 text-right font-mono">
+                              {isBundled ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : (
+                                `$${totalPrice.toFixed(2)}`
+                              )}
+                            </td>
+                            <td className="py-2 pr-3 text-right">{item.leadTimeDays || "-"}</td>
+                            <td className="py-2">
+                              {isBundled && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-600 bg-amber-50">
+                                  Bundled
+                                </Badge>
+                              )}
+                              {isZeroQty && !isBundled && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600 bg-blue-50">
+                                  Info Only
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -627,6 +706,7 @@ export default function ProjectDetailPage() {
                       setShowExtractedPreview(false);
                       setExtractedItems([]);
                       setExtractedSupplierName("");
+                      setExtractedMeta(null);
                     }}
                   >
                     Discard
@@ -808,7 +888,18 @@ function SupplierQuoteCard({
                 {lineItems?.length || 0} line items
                 {supplierQuote.quoteDate &&
                   ` — ${new Date(supplierQuote.quoteDate).toLocaleDateString("en-AU")}`}
+                {supplierQuote.validityDays && ` — Valid ${supplierQuote.validityDays} days`}
+                {supplierQuote.quoteExpiry && (
+                  <span className={new Date(supplierQuote.quoteExpiry) < new Date() ? "text-red-500 font-medium" : ""}>
+                    {new Date(supplierQuote.quoteExpiry) < new Date() ? " — EXPIRED" : ` — Expires ${new Date(supplierQuote.quoteExpiry).toLocaleDateString("en-AU")}`}
+                  </span>
+                )}
               </p>
+              {supplierQuote.deliveryNotes && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <Truck className="h-3 w-3" /> {supplierQuote.deliveryNotes}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -852,15 +943,30 @@ function SupplierQuoteCard({
                 {lineItems.map((item, idx) => {
                   const cost = parseFloat(item.costPrice);
                   return (
-                    <tr key={item.id} className="border-b last:border-0">
+                    <tr key={item.id} className={`border-b last:border-0 ${(item as any).isBundled ? "bg-muted/30" : ""} ${item.quantity === 0 ? "opacity-60" : ""}`}>
                       <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
                       <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
                       <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
-                      <td className="py-2 pr-3 max-w-xs truncate text-xs">{item.description}</td>
+                      <td className="py-2 pr-3 max-w-xs text-xs">
+                        <span className="block truncate" title={item.description || ""}>{item.description}</span>
+                        {(item as any).comments && (
+                          <span className="block text-[10px] text-muted-foreground italic mt-0.5">{(item as any).comments}</span>
+                        )}
+                      </td>
                       <td className="py-2 pr-3 text-right">{item.quantity}</td>
-                      <td className="py-2 pr-3 text-right font-mono">${cost.toFixed(2)}</td>
                       <td className="py-2 pr-3 text-right font-mono">
-                        ${(cost * item.quantity).toFixed(2)}
+                        {(item as any).isBundled ? (
+                          <span className="text-muted-foreground text-xs">incl.</span>
+                        ) : (
+                          `$${cost.toFixed(2)}`
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 text-right font-mono">
+                        {(item as any).isBundled ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          `$${(cost * item.quantity).toFixed(2)}`
+                        )}
                       </td>
                       <td className="py-2 text-right text-muted-foreground">
                         {item.leadTimeDays || "-"}

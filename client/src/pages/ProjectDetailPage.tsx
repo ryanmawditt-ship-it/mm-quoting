@@ -1634,8 +1634,17 @@ function QuoteBuilder({
   const [deliverToName, setDeliverToName] = useState(project.customerName || "");
   const [deliverToAddress, setDeliverToAddress] = useState(project.customerAddress || "");
 
-  // Special instructions / notes
-  const [specialInstructions, setSpecialInstructions] = useState("");
+  // Special instructions / notes — auto-populate from supplier quote delivery notes
+  const [specialInstructions, setSpecialInstructions] = useState(() => {
+    const deliveryNotes: string[] = [];
+    for (const sq of supplierQuotes) {
+      if (sq.deliveryNotes && sq.deliveryNotes.trim()) {
+        const supplierName = suppliers.find((s: any) => s.id === sq.supplierId)?.name || "Supplier";
+        deliveryNotes.push(`${supplierName}:\n${sq.deliveryNotes.trim()}`);
+      }
+    }
+    return deliveryNotes.length > 0 ? deliveryNotes.join("\n\n") : "";
+  });
 
   // Margin persistence mutations
   const updateMarginMutation = trpc.lineItems.updateMargin.useMutation();

@@ -305,6 +305,7 @@ export const appRouter = router({
         z.object({
           customerQuoteId: z.number(),
           lineItemId: z.number(),
+          itemType: z.string().optional(),
           quantity: z.number(),
           description: z.string(),
           costPrice: z.union([z.string(), z.number()]),
@@ -320,7 +321,8 @@ export const appRouter = router({
           input.description,
           input.costPrice,
           input.markupPercent,
-          input.lineOrder
+          input.lineOrder,
+          input.itemType
         )
       ),
     getByCustomerQuote: protectedProcedure

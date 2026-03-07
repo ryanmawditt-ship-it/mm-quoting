@@ -1,0 +1,1 @@
+ALTER TABLE `customer_quote_line_items` ADD `itemType` varchar(100);

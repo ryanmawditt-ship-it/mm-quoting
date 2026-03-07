@@ -173,6 +173,7 @@ export const customerQuoteLineItems = mysqlTable("customer_quote_line_items", {
   id: int("id").autoincrement().primaryKey(),
   customerQuoteId: int("customerQuoteId").notNull().references(() => customerQuotes.id),
   lineItemId: int("lineItemId").notNull().references(() => lineItems.id),
+  itemType: varchar("itemType", { length: 100 }), // Type/area code from supplier quote (e.g., PL1, 1S, TYPE W2)
   quantity: int("quantity").notNull(), // May differ from source line item
   description: text("description"), // May be edited from source
   costPrice: decimal("costPrice", { precision: 12, scale: 4 }).notNull(), // Locked cost at time of quote

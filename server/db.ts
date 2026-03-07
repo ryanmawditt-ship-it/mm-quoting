@@ -302,13 +302,13 @@ export async function updateCustomerQuoteStatus(id: number, status: 'draft' | 's
 /**
  * Customer Quote Line Items
  */
-export async function createCustomerQuoteLineItem(customerQuoteId: number, lineItemId: number, quantity: number, description: string, costPrice: string | number, marginPercent: number, lineOrder: number) {
+export async function createCustomerQuoteLineItem(customerQuoteId: number, lineItemId: number, quantity: number, description: string, costPrice: string | number, marginPercent: number, lineOrder: number, itemType?: string) {
   const db = await getDb();
   if (!db) return;
   const costNum = typeof costPrice === 'string' ? parseFloat(costPrice) : costPrice;
   // Margin formula: Sell Price = Cost / (1 - margin/100)
   const sellPrice = marginPercent >= 100 ? costNum : costNum / (1 - marginPercent / 100);
-  await db.insert(customerQuoteLineItems).values({ customerQuoteId, lineItemId, quantity, description, costPrice: String(costPrice), markupPercent: marginPercent, sellPrice: String(sellPrice), lineOrder });
+  await db.insert(customerQuoteLineItems).values({ customerQuoteId, lineItemId, quantity, description, costPrice: String(costPrice), markupPercent: marginPercent, sellPrice: String(sellPrice), lineOrder, itemType: itemType || null });
 }
 
 export async function getCustomerQuoteLineItems(customerQuoteId: number) {

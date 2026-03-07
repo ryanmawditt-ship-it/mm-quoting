@@ -167,3 +167,8 @@
 - [x] Improve number parsing robustness (commas, spaces, currency symbols)
 - [x] Better error handling and user feedback for extraction failures
 - [x] Auto-add tracked supplier when a quote PDF is uploaded for a project
+- [x] Add Type number column to customer quote line items schema
+- [x] Show Type column in quote builder selection table
+- [x] Pass Type through when creating customer quote line items
+- [x] Show Type column in customer quote preview
+- [x] Add Type column to generated customer quote PDF

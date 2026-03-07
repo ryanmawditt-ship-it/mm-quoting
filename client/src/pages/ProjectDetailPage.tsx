@@ -1013,7 +1013,7 @@ function QuoteBuilder({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number }>>(new Map());
+  const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>(new Map());
   const [globalMargin, setGlobalMargin] = useState<number>(20);
   const [salespersonId, setSalespersonId] = useState<string>("");
   const [jobTitle, setJobTitle] = useState(project.name || "");
@@ -1095,13 +1095,14 @@ function QuoteBuilder({
         quantity: item.quantity,
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
+        itemType: item.type || "",
       });
     }
     setSelectedItems(newSelected);
   };
 
   const selectAll = () => {
-    const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number }>();
+    const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>();
     allLineItems.forEach(({ item, supplier }) => {
       const savedMargin = getItemMargin(item, supplier);
       newSelected.set(item.id, {
@@ -1109,6 +1110,7 @@ function QuoteBuilder({
         quantity: item.quantity,
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
+        itemType: item.type || "",
       });
     });
     setSelectedItems(newSelected);
@@ -1191,6 +1193,7 @@ function QuoteBuilder({
         costPrice: data.costPrice,
         marginPercent: data.margin,
         lineOrder: idx + 1,
+        itemType: data.itemType || "",
       }));
 
       const response = await fetch("/api/generate-customer-quote", {
@@ -1430,6 +1433,7 @@ function QuoteBuilder({
               <tr className="border-b bg-muted/50">
                 <th className="p-3 text-left w-10"></th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Supplier</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Product Code</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
                 <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
@@ -1461,6 +1465,7 @@ function QuoteBuilder({
                       />
                     </td>
                     <td className="p-3 text-xs">{supplier?.name || "Unknown"}</td>
+                    <td className="p-3 text-xs font-medium">{item.type || "-"}</td>
                     <td className="p-3 font-mono text-xs">{item.productCode}</td>
                     <td className="p-3 text-xs max-w-[200px] truncate">
                       {item.description}
@@ -1487,6 +1492,7 @@ function QuoteBuilder({
                               quantity: item.quantity,
                               description: item.description || "",
                               costPrice: parseFloat(item.costPrice),
+                              itemType: item.type || "",
                             });
                             setSelectedItems(newSelected);
                             saveMarginToDb(item.id, clampedMargin);

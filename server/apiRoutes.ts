@@ -422,6 +422,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
     // Create customer quote line items
     const quoteLineItems: Array<{
       lineOrder: number;
+      itemType: string;
       productCode: string;
       description: string;
       quantity: number;
@@ -441,6 +442,8 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
       // Get the original line item for product code and lead time
       const origItem = await getLineItemById(item.lineItemId);
 
+      const itemType = item.itemType || origItem?.type || "";
+
       await createCustomerQuoteLineItem(
         customerQuote.id,
         item.lineItemId,
@@ -448,11 +451,13 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         item.description || origItem?.description || "",
         String(costPrice),
         marginPercent,
-        item.lineOrder
+        item.lineOrder,
+        itemType
       );
 
       quoteLineItems.push({
         lineOrder: item.lineOrder,
+        itemType,
         productCode: origItem?.productCode || "",
         description: item.description || origItem?.description || "",
         quantity: item.quantity,
@@ -529,6 +534,7 @@ interface QuotePDFData {
   jobTitle: string;
   lineItems: Array<{
     lineOrder: number;
+    itemType: string;
     productCode: string;
     description: string;
     quantity: number;
@@ -602,17 +608,18 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       // Helper: draw the table header row (reused on each page)
       // ================================================================
       const COL = {
-        num:   { w: 28,  align: "left"   as const },
-        code:  { w: 100, align: "left"   as const },
+        num:   { w: 24,  align: "left"   as const },
+        type:  { w: 42,  align: "left"   as const },
+        code:  { w: 90,  align: "left"   as const },
         desc:  { w: 175, align: "left"   as const },
-        lt:    { w: 32,  align: "center" as const },
-        qty:   { w: 32,  align: "center" as const },
-        uom:   { w: 32,  align: "center" as const },
-        price: { w: 68,  align: "right"  as const },
-        total: { w: 78,  align: "right"  as const },
+        lt:    { w: 28,  align: "center" as const },
+        qty:   { w: 28,  align: "center" as const },
+        uom:   { w: 28,  align: "center" as const },
+        price: { w: 62,  align: "right"  as const },
+        total: { w: 72,  align: "right"  as const },
       };
       // Remaining space distributed to desc
-      const usedW = COL.num.w + COL.code.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w + COL.total.w;
+      const usedW = COL.num.w + COL.type.w + COL.code.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w + COL.total.w;
       COL.desc.w = CW - usedW - 16; // 16 for padding
 
       const MIN_ROW_H = 22;
@@ -639,6 +646,8 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         let x = ML + 8;
         doc.text("#",           x, y + 8, { width: COL.num.w,   align: COL.num.align });
         x += COL.num.w;
+        doc.text("Type",        x, y + 8, { width: COL.type.w,  align: COL.type.align });
+        x += COL.type.w;
         doc.text("Part Number", x, y + 8, { width: COL.code.w,  align: COL.code.align });
         x += COL.code.w;
         doc.text("Description", x, y + 8, { width: COL.desc.w,  align: COL.desc.align });
@@ -839,6 +848,11 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         let x = ML + 8;
         doc.text(String(item.lineOrder), x, rowTextY, { width: COL.num.w, align: COL.num.align });
         x += COL.num.w;
+
+        // Type column
+        doc.font("Helvetica-Bold").fillColor(C.accent);
+        doc.text(item.itemType || "-", x, rowTextY, { width: COL.type.w - 2, align: COL.type.align });
+        x += COL.type.w;
 
         // Product code in slightly bolder style
         doc.font("Helvetica-Bold").fillColor(C.dark);

@@ -192,3 +192,5 @@
 - [x] Improve quote builder UX: make editable Qty and drag-to-reorder more discoverable
 - [x] Move Qty editing into the main selection table (not hidden behind horizontal scroll)
 - [x] Make reorder section more prominent or integrate it into the main flow
+- [x] Fix: "Rendered more hooks than during previous render" error on Step 2 of quote builder
+- [x] Fix: Trash2 is not defined error in ProjectDetailPage

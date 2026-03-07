@@ -2134,6 +2134,12 @@ function QuoteBuilder({
 
   const [step, setStep] = useState<1 | 2>(1);
 
+  // DnD sensors - must be at top level (not inside conditional JSX)
+  const reviewSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   // Step 2: ordered selected items for the review table
   const orderedSelectedItems = useMemo(() => {
     const finalOrder = orderedItemIds.filter(id => selectedItems.has(id));
@@ -2413,10 +2419,7 @@ function QuoteBuilder({
             </div>
 
             <DndContext
-              sensors={useSensors(
-                useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-                useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-              )}
+              sensors={reviewSensors}
               collisionDetection={closestCenter}
               onDragEnd={(event) => {
                 const { active, over } = event;

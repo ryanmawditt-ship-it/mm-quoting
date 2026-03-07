@@ -186,3 +186,6 @@
 - [x] Remove quantity from group summary rows (mixed items like clips shouldn't be summed)
 - [x] Show only total price on group header rows (no qty column)
 - [x] Auto-populate quote builder special instructions/notes with delivery notes extracted from supplier quotes
+- [x] Add drag-to-reorder line items in quote builder to control sequence on customer quote
+- [x] Add editable quantity field in quote builder so user can override supplier-quoted quantities
+- [x] Ensure reordered sequence is preserved when generating customer quote PDF

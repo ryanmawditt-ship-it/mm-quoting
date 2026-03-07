@@ -60,6 +60,7 @@ import {
   ChevronDown,
   ChevronRight,
   Trash2,
+  GripVertical,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -1229,12 +1230,139 @@ function SupplierQuoteCard({
   );
 }
 
+// Sortable item for the reorder list
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function SortableRow({ id, lineNum, itemType, description, quantity, sellTotal }: {
+  id: number;
+  lineNum: number;
+  itemType: string;
+  description: string;
+  quantity: number;
+  sellTotal: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 p-3 border rounded-lg bg-background ${
+        isDragging ? "shadow-lg ring-2 ring-primary/30" : "hover:bg-muted/30"
+      }`}
+    >
+      <button
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <span className="w-8 text-center font-mono text-xs font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5">
+        {lineNum}
+      </span>
+      {itemType && (
+        <Badge variant="outline" className="text-xs shrink-0">
+          {itemType}
+        </Badge>
+      )}
+      <span className="text-sm truncate flex-1">{description}</span>
+      <span className="text-xs text-muted-foreground shrink-0">Qty: {quantity}</span>
+      <span className="font-mono text-sm font-medium shrink-0">{sellTotal}</span>
+    </div>
+  );
+}
+
+function ReorderList({
+  orderedItemIds,
+  selectedItems,
+  allLineItems,
+  onReorder,
+}: {
+  orderedItemIds: number[];
+  selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>;
+  allLineItems: Array<{ item: any; supplier: any; supplierQuote: any }>;
+  onReorder: (newOrder: number[]) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedItemIds.indexOf(active.id as number);
+      const newIndex = orderedItemIds.indexOf(over.id as number);
+      onReorder(arrayMove(orderedItemIds, oldIndex, newIndex));
+    }
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={orderedItemIds} strategy={verticalListSortingStrategy}>
+        <div className="space-y-1">
+          {orderedItemIds.map((itemId, idx) => {
+            const data = selectedItems.get(itemId);
+            if (!data) return null;
+            const lineItem = allLineItems.find(({ item }) => item.id === itemId);
+            const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
+            const sellTotal = `$${(sellPrice * data.quantity).toFixed(2)}`;
+            return (
+              <SortableRow
+                key={itemId}
+                id={itemId}
+                lineNum={idx + 1}
+                itemType={data.itemType}
+                description={lineItem?.item?.description || data.description}
+                quantity={data.quantity}
+                sellTotal={sellTotal}
+              />
+            );
+          })}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
 // Quote Builder Table with collapsible type groups
 function QuoteBuilderTable({
   allLineItems,
   selectedItems,
   toggleItem,
   updateItemMargin,
+  updateItemQuantity,
   saveMarginToDb,
   setSelectedItems,
   globalMargin,
@@ -1243,6 +1371,7 @@ function QuoteBuilderTable({
   selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>;
   toggleItem: (itemId: number, item: any, supplier: any) => void;
   updateItemMargin: (itemId: number, margin: number) => void;
+  updateItemQuantity: (itemId: number, quantity: number) => void;
   saveMarginToDb: (itemId: number, margin: number) => void;
   setSelectedItems: React.Dispatch<React.SetStateAction<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>>;
   globalMargin: number;
@@ -1363,7 +1492,19 @@ function QuoteBuilderTable({
         <td className="p-3 text-xs max-w-[200px] truncate">
           {isGrouped ? "" : item.description}
         </td>
-        <td className="p-3 text-right">{qty}</td>
+        <td className="p-3 text-right">
+          {isSelected ? (
+            <Input
+              type="number"
+              className="w-20 h-7 text-right text-xs"
+              value={qty}
+              onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 0)}
+              min={0}
+            />
+          ) : (
+            qty
+          )}
+        </td>
         <td className="p-3 text-right font-mono text-muted-foreground">
           ${cost.toFixed(2)}
         </td>
@@ -1551,7 +1692,19 @@ function QuoteBuilderTable({
                         <td className="p-3 text-xs max-w-[200px] truncate" colSpan={2}>
                           {item.description}
                         </td>
-                        <td className="p-3 text-right">{qty}</td>
+                        <td className="p-3 text-right">
+                          {isSelected ? (
+                            <Input
+                              type="number"
+                              className="w-20 h-7 text-right text-xs"
+                              value={qty}
+                              onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 0)}
+                              min={0}
+                            />
+                          ) : (
+                            qty
+                          )}
+                        </td>
                         <td className="p-3 text-right font-mono text-muted-foreground">
                           ${cost.toFixed(2)}
                         </td>
@@ -1619,6 +1772,7 @@ function QuoteBuilder({
   onSuccess: () => void;
 }) {
   const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>(new Map());
+  const [orderedItemIds, setOrderedItemIds] = useState<number[]>([]);
   const [globalMargin, setGlobalMargin] = useState<number>(20);
   const [salespersonId, setSalespersonId] = useState<string>("");
   const [jobTitle, setJobTitle] = useState(project.name || "");
@@ -1701,6 +1855,7 @@ function QuoteBuilder({
     const newSelected = new Map(selectedItems);
     if (newSelected.has(itemId)) {
       newSelected.delete(itemId);
+      setOrderedItemIds(prev => prev.filter(id => id !== itemId));
     } else {
       // Use saved margin from DB, or supplier default, or global
       const savedMargin = getItemMargin(item, supplier);
@@ -1711,12 +1866,14 @@ function QuoteBuilder({
         costPrice: parseFloat(item.costPrice),
         itemType: item.type || "",
       });
+      setOrderedItemIds(prev => [...prev, itemId]);
     }
     setSelectedItems(newSelected);
   };
 
   const selectAll = () => {
     const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>();
+    const newOrder: number[] = [];
     allLineItems.forEach(({ item, supplier }) => {
       const savedMargin = getItemMargin(item, supplier);
       newSelected.set(item.id, {
@@ -1726,12 +1883,27 @@ function QuoteBuilder({
         costPrice: parseFloat(item.costPrice),
         itemType: item.type || "",
       });
+      if (!orderedItemIds.includes(item.id)) {
+        newOrder.push(item.id);
+      }
     });
     setSelectedItems(newSelected);
+    setOrderedItemIds(prev => [...prev.filter(id => newSelected.has(id)), ...newOrder]);
   };
 
   const deselectAll = () => {
     setSelectedItems(new Map());
+    setOrderedItemIds([]);
+  };
+
+  // Update quantity for a selected item
+  const updateItemQuantity = (itemId: number, quantity: number) => {
+    const newSelected = new Map(selectedItems);
+    const existing = newSelected.get(itemId);
+    if (existing) {
+      newSelected.set(itemId, { ...existing, quantity: Math.max(0, quantity) });
+    }
+    setSelectedItems(newSelected);
   };
 
   // Update margin for a single item — saves to local state AND persists to DB
@@ -1800,15 +1972,25 @@ function QuoteBuilder({
 
     setGenerating(true);
     try {
-      const items = Array.from(selectedItems.entries()).map(([lineItemId, data], idx) => ({
-        lineItemId,
-        quantity: data.quantity,
-        description: data.description,
-        costPrice: data.costPrice,
-        marginPercent: data.margin,
-        lineOrder: idx + 1,
-        itemType: data.itemType || "",
-      }));
+      // Use the user's custom order if they've reordered, otherwise use selection order
+      const finalOrder = orderedItemIds.filter(id => selectedItems.has(id));
+      // Add any selected items not yet in the order list (shouldn't happen, but safety)
+      selectedItems.forEach((_, id) => {
+        if (!finalOrder.includes(id)) finalOrder.push(id);
+      });
+
+      const items = finalOrder.map((lineItemId, idx) => {
+        const data = selectedItems.get(lineItemId)!;
+        return {
+          lineItemId,
+          quantity: data.quantity,
+          description: data.description,
+          costPrice: data.costPrice,
+          marginPercent: data.margin,
+          lineOrder: idx + 1,
+          itemType: data.itemType || "",
+        };
+      });
 
       const response = await fetch("/api/generate-customer-quote", {
         method: "POST",
@@ -2046,11 +2228,29 @@ function QuoteBuilder({
           selectedItems={selectedItems}
           toggleItem={toggleItem}
           updateItemMargin={updateItemMargin}
+          updateItemQuantity={updateItemQuantity}
           saveMarginToDb={saveMarginToDb}
           setSelectedItems={setSelectedItems}
           globalMargin={globalMargin}
         />
       </div>
+
+      {/* Reorder Selected Items */}
+      {orderedItemIds.filter(id => selectedItems.has(id)).length > 1 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-semibold text-sm">Reorder Quote Lines</h3>
+            <span className="text-xs text-muted-foreground">(Drag to reorder how items appear on the customer quote)</span>
+          </div>
+          <ReorderList
+            orderedItemIds={orderedItemIds.filter(id => selectedItems.has(id))}
+            selectedItems={selectedItems}
+            allLineItems={allLineItems}
+            onReorder={(newOrder) => setOrderedItemIds(newOrder)}
+          />
+        </div>
+      )}
 
       {/* Totals */}
       <div className="bg-muted/50 rounded-lg p-4">

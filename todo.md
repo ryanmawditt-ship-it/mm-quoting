@@ -172,3 +172,7 @@
 - [x] Pass Type through when creating customer quote line items
 - [x] Show Type column in customer quote preview
 - [x] Add Type column to generated customer quote PDF
+- [x] Fix extraction to capture ALL descriptive info from supplier quotes, not just priced line items
+- [x] Include LED strip run lengths, PSU details, converter specs, finish notes in descriptions
+- [x] Items without qty/price should still be captured as descriptive detail under their Type
+- [x] Preserve supplier notes like "Finish to be confirmed", "Quoted as per Section drawing"

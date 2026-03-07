@@ -657,12 +657,12 @@ export default function ProjectDetailPage() {
                             <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
                             <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
                             <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
-                            <td className="py-2 pr-3 max-w-xs">
-                              <span className="block truncate" title={item.description}>{item.description}</span>
+                            <td className="py-2 pr-3 max-w-sm">
+                              <span className="block text-xs">{item.description}</span>
                               {item.comments && (
-                                <span className="block text-xs text-muted-foreground italic mt-0.5" title={item.comments}>
+                                <div className="mt-1 p-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-[10px] text-amber-800 dark:text-amber-200 whitespace-pre-line">
                                   {item.comments}
-                                </span>
+                                </div>
                               )}
                             </td>
                             <td className="py-2 pr-3 text-right">{item.quantity}</td>
@@ -947,10 +947,12 @@ function SupplierQuoteCard({
                       <td className="py-2 pr-3 text-muted-foreground">{idx + 1}</td>
                       <td className="py-2 pr-3 text-xs">{item.type || "-"}</td>
                       <td className="py-2 pr-3 font-mono text-xs">{item.productCode}</td>
-                      <td className="py-2 pr-3 max-w-xs text-xs">
-                        <span className="block truncate" title={item.description || ""}>{item.description}</span>
+                      <td className="py-2 pr-3 max-w-sm text-xs">
+                        <span className="block">{item.description}</span>
                         {(item as any).comments && (
-                          <span className="block text-[10px] text-muted-foreground italic mt-0.5">{(item as any).comments}</span>
+                          <div className="mt-1 p-1.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-[10px] text-amber-800 dark:text-amber-200 whitespace-pre-line">
+                            {(item as any).comments}
+                          </div>
                         )}
                       </td>
                       <td className="py-2 pr-3 text-right">{item.quantity}</td>

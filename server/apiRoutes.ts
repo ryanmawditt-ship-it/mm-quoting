@@ -95,14 +95,27 @@ You will encounter quotes from various Australian electrical suppliers. Here are
 
 **LUXSON ILLUMINATION:**
 - Columns: Product name and additional info | Qty | Price | Unit | Sum
-- Items grouped under bold section headers like "TYPE W2", "FREIGHT" — these headers have section subtotals
-- Section headers are NOT line items — only extract actual products under them
-- The section header name (e.g., "TYPE W2") should be used as the "type" field for items under it
+- Items grouped under bold section headers like "TYPE W2", "TYPE LED 2", "FREIGHT" — these headers have section subtotals
+- The section header name (e.g., "TYPE W2", "TYPE LED 2") should be used as the "type" field for items under it
 - CRITICAL: Uses space-separated thousands in numbers (e.g., "5 393.29" means 5393.29, "4 541.46" means 4541.46). Parse these correctly!
 - Product code is on the first line, description on the second line of each item
 - "Unit" column values like "Pce", "Per Delivery" map to unitOfMeasure
 - Validity: 30 days
 - Lead times in T&Cs: local 4-6 weeks, imported 10-12 weeks
+
+**CRITICAL — LUXSON TYPE HEADER NOTES:**
+Luxson TYPE headers often contain IMPORTANT descriptive information below the TYPE name that is NOT a separate line item but is critical context. This includes:
+- Assembly specifications (e.g., "-ASSEMBLED AS\n26 X 1M\n1 X 3.5M")
+- LED strip run lengths and calculations (e.g., "0.3m(280mm) + 3.5m(2x1720mm) + 1.75m(1720mm) + 1.6m(1480mm) with 150w psu + 0-10VA2PWM converter + Casambi control")
+- Section/level breakdowns (e.g., "Section C + D + A of drawing\nLevel 2 - Level 1")
+- Total length calculations (e.g., "Total Required Length: 42.6m\nTotal Manufactured Length: 40.8m")
+- Supplier warnings (e.g., "***Finish to be confirmed***", "***Quoted as per the Section drawing***")
+- Technical notes (e.g., "**NOTE COLOUR TEMP TO BE CONFIRMED - 4000K QUOTED", "QUOTED DALI", "QUOTED IP65")
+- Beam angle notes (e.g., "QUOTED 25 DEGREE BEAM. 15 DEGREE BEAM IS NOT AN OPTION")
+- Power supply notes (e.g., "***NOTE QUOTED WITH INDIVIDUAL POWER SUPPLIES - IF GROUPINGS REQUIRED ADVISE FOR REQUOTE***")
+- Clarification requests (e.g., "PLEASE CLARIFY PRIOR TO ACCEPTING QUOTE AS LIGHT SPECIFATION WAS NOT COMPLETE")
+
+You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text that appears under a TYPE header but is NOT a priced line item. This text will be appended to the description of items under that type.
 
 **CLEVERTRONICS:**
 - Columns: Type Number | Product Code | Item Description | Comments | Qty | Unit Price | Extended Price
@@ -115,7 +128,7 @@ You will encounter quotes from various Australian electrical suppliers. Here are
 
 **GENERAL RULES FOR ALL SUPPLIERS:**
 1. Extract EVERY product line item — do not skip any
-2. Do NOT extract notes, terms & conditions, or section headers as line items
+2. Do NOT extract terms & conditions as line items
 3. For descriptions: include the FULL and COMPLETE text exactly as written. Include ALL technical specs, model details, colour temps, wattages, dimensions, finishes. Do NOT truncate or summarise.
 4. For numbers: handle comma-separated (2,950.00), space-separated (5 393.29), and plain formats. Strip currency symbols ($, AUD). Always return clean decimal numbers.
 5. If an item has a "Total" or "Extended Price" but no unit price, calculate: unitPrice = total / quantity. If quantity is 0, use the total as unitPrice.
@@ -124,6 +137,7 @@ You will encounter quotes from various Australian electrical suppliers. Here are
 8. Quote validity: extract explicit expiry dates, or note the validity period in days (30, 60, 90 days)
 9. Freight/delivery items are real line items — extract them with type="FREIGHT"
 10. For the supplier name, use the FULL legal company name as shown on the quote header
+11. CRITICAL — TYPE/SECTION HEADER NOTES: When a TYPE header (e.g., "TYPE LED 2", "TYPE LS3", "TYPE D9") contains descriptive text, notes, assembly specs, LED run lengths, warnings, or any other information below the TYPE name but BEFORE the priced line items, you MUST capture ALL of that text in the "typeNotes" field for every line item under that type. This information is essential — it contains assembly instructions, run length calculations, finish confirmations, technical warnings, and supplier conditions that the customer needs to see. NEVER discard this information.
 
 Return ONLY valid JSON matching the schema. Do not include markdown formatting or code blocks.`,
         },
@@ -172,6 +186,7 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
                     productCode: { type: "string", description: "Product/part code" },
                     description: { type: "string", description: "Full product description with all specs" },
                     comments: { type: ["string", "null"], description: "Per-item notes or comments (e.g., IK ratings, special requests)" },
+                    typeNotes: { type: ["string", "null"], description: "ALL descriptive text from the TYPE/section header that applies to this item. Include assembly specs, LED run lengths, PSU details, converter info, finish notes, warnings, technical notes, section/level breakdowns, total length calculations — everything that appears under the TYPE header but is not a priced line item. Preserve the full text exactly as written, including line breaks." },
                     quantity: { type: "number", description: "Number of units (can be 0 for informational items)" },
                     unitPrice: { type: "number", description: "Unit price as a decimal number (0 for bundled items with no separate price)" },
                     totalPrice: { type: ["number", "null"], description: "Extended/total price if shown on the quote" },
@@ -179,7 +194,7 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
                     leadTimeDays: { type: ["number", "null"], description: "Item-specific lead time in days" },
                     unitOfMeasure: { type: "string", description: "Unit of measure (EA, Pce, m, Per Delivery, etc.)" },
                   },
-                  required: ["productCode", "description", "quantity", "unitPrice", "unitOfMeasure", "isBundled"],
+                  required: ["productCode", "description", "quantity", "unitPrice", "unitOfMeasure", "isBundled", "typeNotes"],
                   additionalProperties: false,
                 },
               },
@@ -297,6 +312,17 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
       const quantity = typeof item.quantity === "number" ? item.quantity : parseInt(item.quantity) || 0;
       const isBundled = item.isBundled === true || (unitPrice === 0 && quantity > 0 && !item.productCode?.toUpperCase().includes("FREIGHT"));
 
+      // Merge typeNotes and comments into a single comments field
+      // typeNotes contains critical info from TYPE headers (assembly specs, LED runs, warnings)
+      const typeNotes = item.typeNotes || null;
+      const itemComments = item.comments || null;
+      let mergedComments: string | null = null;
+      if (typeNotes && itemComments) {
+        mergedComments = `${typeNotes}\n---\n${itemComments}`;
+      } else {
+        mergedComments = typeNotes || itemComments;
+      }
+
       await createLineItem(
         supplierQuote.id,
         item.productCode || "UNKNOWN",
@@ -308,7 +334,7 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
         item.unitOfMeasure || "EA",
         itemLeadTime,
         undefined, // markupPercent
-        item.comments || null,
+        mergedComments || undefined,
         totalPrice != null ? String(totalPrice) : undefined,
         isBundled
       );
@@ -316,7 +342,8 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
         type: item.type,
         productCode: item.productCode,
         description: item.description,
-        comments: item.comments || null,
+        comments: mergedComments,
+        typeNotes,
         quantity,
         costPrice: String(unitPrice),
         totalPrice: totalPrice != null ? String(totalPrice) : null,

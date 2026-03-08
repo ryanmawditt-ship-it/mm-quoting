@@ -944,10 +944,10 @@ function fmtDate(d: Date): string {
 async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
-      const ML = 50;  // margin left
-      const MR = 50;  // margin right
-      const MT = 45;  // margin top
-      const MB = 60;  // margin bottom
+      const ML = 40;  // margin left
+      const MR = 40;  // margin right
+      const MT = 35;  // margin top
+      const MB = 36;  // margin bottom
 
       const doc = new PDFDocument({
         size: "A4",
@@ -986,10 +986,10 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       const usedW = COL.num.w + COL.type.w + COL.code.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w + COL.total.w;
       COL.desc.w = CW - usedW - 16; // 16 for padding
 
-      const MIN_ROW_H = 22;
-      const HDR_H = 26;
-      const ROW_PAD_TOP = 6;
-      const ROW_PAD_BOT = 6;
+      const MIN_ROW_H = 18;
+      const HDR_H = 22;
+      const ROW_PAD_TOP = 4;
+      const ROW_PAD_BOT = 4;
       const DESC_FONT_SIZE = 7;
 
       // Helper: measure the height a description will need
@@ -1008,23 +1008,24 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
 
         doc.fontSize(7).font("Helvetica-Bold").fillColor(C.white);
         let x = ML + 8;
-        doc.text("#",           x, y + 8, { width: COL.num.w,   align: COL.num.align });
+        const hdrTextY = y + 6;
+        doc.text("#",           x, hdrTextY, { width: COL.num.w,   align: COL.num.align });
         x += COL.num.w;
-        doc.text("Type",        x, y + 8, { width: COL.type.w,  align: COL.type.align });
+        doc.text("Type",        x, hdrTextY, { width: COL.type.w,  align: COL.type.align });
         x += COL.type.w;
-        doc.text("Part Number", x, y + 8, { width: COL.code.w,  align: COL.code.align });
+        doc.text("Part Number", x, hdrTextY, { width: COL.code.w,  align: COL.code.align });
         x += COL.code.w;
-        doc.text("Description", x, y + 8, { width: COL.desc.w,  align: COL.desc.align });
+        doc.text("Description", x, hdrTextY, { width: COL.desc.w,  align: COL.desc.align });
         x += COL.desc.w;
-        doc.text("LT",          x, y + 8, { width: COL.lt.w,    align: COL.lt.align });
+        doc.text("LT",          x, hdrTextY, { width: COL.lt.w,    align: COL.lt.align });
         x += COL.lt.w;
-        doc.text("Qty",         x, y + 8, { width: COL.qty.w,   align: COL.qty.align });
+        doc.text("Qty",         x, hdrTextY, { width: COL.qty.w,   align: COL.qty.align });
         x += COL.qty.w;
-        doc.text("UOM",         x, y + 8, { width: COL.uom.w,   align: COL.uom.align });
+        doc.text("UOM",         x, hdrTextY, { width: COL.uom.w,   align: COL.uom.align });
         x += COL.uom.w;
-        doc.text("Unit Price",  x, y + 8, { width: COL.price.w, align: COL.price.align });
+        doc.text("Unit Price",  x, hdrTextY, { width: COL.price.w, align: COL.price.align });
         x += COL.price.w;
-        doc.text("Line Total",  x, y + 8, { width: COL.total.w, align: COL.total.align });
+        doc.text("Line Total",  x, hdrTextY, { width: COL.total.w, align: COL.total.align });
 
         return y + HDR_H;
       }
@@ -1100,11 +1101,11 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       if (data.salespersonName) metaLine("Contact:", data.salespersonName);
       metaLine("Project:", data.jobTitle);
 
-      Y = Math.max(subY, mY) + 12;
+      Y = Math.max(subY, mY) + 8;
 
       // ---- Divider ----
       doc.moveTo(ML, Y).lineTo(PW - MR, Y).strokeColor(C.border).lineWidth(1).stroke();
-      Y += 14;
+      Y += 10;
 
       // ---- Quote To / Deliver To ----
       const cust = data.customerDetails;
@@ -1164,7 +1165,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         doc.text(delAddress, dtX + 12, dY, { width: halfW - 24 });
       }
 
-      Y += boxH + 12;
+      Y += boxH + 8;
 
       // ================================================================
       // TABLE
@@ -1208,7 +1209,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       let rowCounter = 0;
 
       const ensurePageSpace = (neededH: number) => {
-        if (tableY + neededH > PH - MB - 100) {
+        if (tableY + neededH > PH - MB - 20) {
           doc.addPage();
           doc.save();
           doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();
@@ -1292,7 +1293,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
 
         if (showGroupHeader) {
           // Draw type group header row — total price only, no qty
-          const groupHeaderH = 24;
+          const groupHeaderH = 20;
           ensurePageSpace(groupHeaderH);
 
           // Subtle accent background for group header
@@ -1307,13 +1308,13 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
 
           doc.moveTo(ML, tableY + groupHeaderH).lineTo(PW - MR, tableY + groupHeaderH).strokeColor(C.border).lineWidth(0.5).stroke();
 
-          const ghTextY = tableY + 7;
+          const ghTextY = tableY + 5;
           doc.fontSize(8).font("Helvetica-Bold").fillColor(C.navy);
           doc.text(group.type || "Items", ML + 12, ghTextY, { width: CW - 120 });
 
           // Item count
           doc.fontSize(7).font("Helvetica").fillColor(C.muted);
-          doc.text(`${group.items.length} items`, ML + 12, ghTextY + 10, { width: 100 });
+          doc.text(`${group.items.length} items`, ML + 80, ghTextY, { width: 100 });
 
           // Group total on the right (price only, no qty)
           doc.fontSize(8.5).font("Helvetica-Bold").fillColor(C.navy);
@@ -1334,7 +1335,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       // TOTALS
       // ================================================================
       // Check if totals fit on current page
-      if (tableY + 90 > PH - MB) {
+      if (tableY + 80 > PH - MB - 10) {
         doc.addPage();
         doc.save();
         doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();
@@ -1342,7 +1343,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         tableY = MT + 10;
       }
 
-      tableY += 10;
+      tableY += 6;
       const totW = 220;
       const totX = PW - MR - totW;
 
@@ -1383,7 +1384,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         const instrHeight = doc.heightOfString(data.specialInstructions, { width: CW - 24, lineGap: 3 });
         const instrBoxH = instrHeight + 40; // padding + title
 
-        if (tableY + instrBoxH > PH - MB) {
+        if (tableY + instrBoxH > PH - MB - 10) {
           doc.addPage();
           doc.save();
           doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();
@@ -1414,7 +1415,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         doc.fontSize(7).font("Helvetica");
         const termsHeight = doc.heightOfString(settings.standardTerms, { width: CW, lineGap: 3 });
 
-        if (tableY + termsHeight + 30 > PH - MB) {
+        if (tableY + termsHeight + 20 > PH - MB - 10) {
           doc.addPage();
           doc.save();
           doc.rect(0, 0, PW, 6).fillColor(C.accent).fill();
@@ -1442,7 +1443,7 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         // Page number + quote ref on one line — position in the margin area
         const footerText = `${data.quoteNumber}  \u00B7  Page ${i + 1} of ${pageCount}`;
         doc.fontSize(7).font("Helvetica").fillColor(C.light);
-        doc.text(footerText, ML, PH - 28, { width: CW, align: "center", lineBreak: false, height: 12 });
+        doc.text(footerText, ML, PH - 22, { width: CW, align: "center", lineBreak: false, height: 12 });
       }
 
       doc.end();

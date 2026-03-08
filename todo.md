@@ -234,3 +234,4 @@
 - [x] Update PDF generation to use company settings for header (name, ABN, address, logo)
 - [x] Update PDF generation to use custom color scheme
 - [x] Fix: Settings page save reverts to old values instead of persisting changes
+- [x] Fix: PDF pages not utilizing full page length, too much wasted space at bottom of each page

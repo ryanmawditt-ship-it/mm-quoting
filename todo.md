@@ -209,3 +209,6 @@
 - [x] Customer schedule import: frontend UI with Import Schedule button and extracted type preview badges
 - [x] Customer schedule import: auto-sort logic with fuzzy type code matching (normalises TYPE prefix, handles partial matches)
 - [x] Customer schedule import: 16 unit tests for normalisation, fuzzy matching, and auto-sort logic
+- [x] Customer schedule import: add Excel (.xlsx/.xls) and CSV file support
+- [x] Customer schedule import: server-side spreadsheet parsing to extract type codes from rows/columns
+- [x] Customer schedule import: update frontend file picker to accept spreadsheet formats

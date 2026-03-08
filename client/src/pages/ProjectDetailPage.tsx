@@ -2551,7 +2551,7 @@ function QuoteBuilder({
                 <div>
                   <h3 className="font-semibold text-sm">Auto-Sort from Customer Schedule</h3>
                   <p className="text-xs text-muted-foreground">
-                    Import the customer's lighting schedule or tender document to automatically sort items in their required order.
+                    Import the customer's lighting schedule (PDF, Excel, CSV, or image) to automatically sort items in their required order.
                   </p>
                 </div>
               </div>
@@ -2559,7 +2559,7 @@ function QuoteBuilder({
                 <input
                   ref={scheduleFileRef}
                   type="file"
-                  accept=".pdf,image/*"
+                  accept=".pdf,.xlsx,.xls,.csv,image/*,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];

@@ -572,16 +572,146 @@ apiRouter.post("/api/extract-customer-schedule", upload.single("file"), async (r
       return;
     }
 
-    // Upload to S3 for AI processing
+    const mime = file.mimetype || "";
+    const ext = (file.originalname || "").split(".").pop()?.toLowerCase() || "";
+
+    // ---- Spreadsheet path: parse Excel/CSV directly, then use AI to identify type columns ----
+    const isSpreadsheet =
+      ext === "xlsx" || ext === "xls" || ext === "csv" ||
+      mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      mime === "application/vnd.ms-excel" ||
+      mime === "text/csv";
+
+    if (isSpreadsheet) {
+      const XLSX = await import("xlsx");
+      let workbook;
+      if (ext === "csv" || mime === "text/csv") {
+        const csvText = file.buffer.toString("utf-8");
+        workbook = XLSX.read(csvText, { type: "string" });
+      } else {
+        workbook = XLSX.read(file.buffer, { type: "buffer" });
+      }
+
+      // Convert all sheets to text for AI analysis
+      const sheetsText: string[] = [];
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const csv = XLSX.utils.sheet_to_csv(sheet, { FS: "\t", RS: "\n" });
+        // Skip empty sheets
+        if (csv.trim().length > 0) {
+          sheetsText.push(`=== Sheet: ${sheetName} ===\n${csv}`);
+        }
+      }
+
+      if (sheetsText.length === 0) {
+        res.status(400).json({ error: "The spreadsheet appears to be empty" });
+        return;
+      }
+
+      // Truncate if very large (keep first 15000 chars to stay within token limits)
+      let allText = sheetsText.join("\n\n");
+      if (allText.length > 15000) {
+        allText = allText.substring(0, 15000) + "\n... (truncated)";
+      }
+
+      // Use AI to identify type codes from the spreadsheet data
+      const response = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert at reading construction and electrical tender documents, lighting schedules, and fixture specifications. You are given spreadsheet data in tab-separated format. Extract type codes and their order accurately. Return ONLY valid JSON, no markdown.",
+          },
+          {
+            role: "user",
+            content: `Extract the TYPE CODES / FIXTURE TYPES and their ORDER from this customer lighting schedule spreadsheet.
+
+The spreadsheet data is below (tab-separated columns). Look for columns that contain type codes like "TYPE 1L", "1P", "2S", "LED 1", "D7", "PL1", "1E", "2E", "3E", "FREIGHT", etc.
+
+The type code column might be labelled: "Type", "Type No", "Type Number", "Fixture Type", "Luminaire Type", "Item", "Ref", "Tag", "Mark", or similar. It could also be the first column with short alphanumeric codes.
+
+I need you to extract:
+1. Every type code in the EXACT ORDER they appear in the rows (top to bottom)
+2. Any description or fixture name from adjacent columns
+3. Any quantity from a "Qty" or "Quantity" column
+
+IMPORTANT RULES:
+- Preserve the exact row order — this order is critical
+- Normalise type codes: remove "TYPE " prefix variations but keep the core code
+- If the same type appears in multiple rows, only include it once (first occurrence determines position)
+- Skip header rows, total rows, and empty rows
+- Common type code patterns: "1L", "1P", "2S", "LED 1", "LED 2", "D7", "W2", "LS3", "PL1", "1E", "2E", "3E", "FREIGHT"
+
+Spreadsheet data:
+${allText}`,
+          },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "customer_schedule",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                types: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      code: { type: "string", description: "The type/fixture code" },
+                      description: { type: ["string", "null"], description: "Description if available" },
+                      quantity: { type: ["number", "null"], description: "Quantity if mentioned" },
+                    },
+                    required: ["code", "description", "quantity"],
+                    additionalProperties: false,
+                  },
+                },
+                documentTitle: { type: ["string", "null"], description: "Title of the document" },
+                totalTypes: { type: "number", description: "Total unique types found" },
+              },
+              required: ["types", "documentTitle", "totalTypes"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+
+      const content = response.choices?.[0]?.message?.content as string | undefined;
+      if (!content) {
+        res.status(500).json({ error: "AI did not return any content" });
+        return;
+      }
+
+      let parsed;
+      try {
+        let cleaned = content.trim();
+        if (cleaned.startsWith("```")) {
+          cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        }
+        parsed = JSON.parse(cleaned);
+      } catch (e) {
+        console.error("[CustomerSchedule] Failed to parse AI response from spreadsheet:", content);
+        res.status(500).json({ error: "Failed to parse extracted data from spreadsheet" });
+        return;
+      }
+
+      res.json({
+        success: true,
+        types: parsed.types || [],
+        documentTitle: parsed.documentTitle || file.originalname || null,
+        totalTypes: parsed.totalTypes || parsed.types?.length || 0,
+      });
+      return;
+    }
+
+    // ---- PDF / Image path: upload to S3 and use AI vision ----
     const fileKey = `customer-schedules/${user.id}/${nanoid()}-${file.originalname}`;
-    const contentType = file.mimetype || "application/pdf";
+    const contentType = mime || "application/pdf";
     const { url: fileUrl } = await storagePut(fileKey, file.buffer, contentType);
 
-    // Determine the mime type for the AI call
-    const isPdf = file.mimetype === "application/pdf";
-    const isImage = file.mimetype?.startsWith("image/");
+    const isPdf = mime === "application/pdf";
+    const isImage = mime.startsWith("image/");
 
-    // Build the content array for the AI
     const userContent: any[] = [
       {
         type: "text",
@@ -595,7 +725,7 @@ I need you to extract:
 3. Any quantity mentioned for each type (if available)
 
 IMPORTANT RULES:
-- Preserve the exact order as listed in the document — this order is critical
+- Preserve the exact order as listed in the document \u2014 this order is critical
 - Normalise type codes: remove "TYPE " prefix variations ("Type ", "TYPE ", "type ") but keep the core code
 - Include ALL types, even if they appear in headers, tables, or schedules
 - If the same type appears multiple times, only include it once (first occurrence determines position)
@@ -625,7 +755,6 @@ Return ONLY valid JSON matching this schema (no markdown, no code blocks):
         image_url: { url: fileUrl, detail: "high" },
       });
     } else {
-      // Try as PDF anyway
       userContent.push({
         type: "file_url",
         file_url: { url: fileUrl, mime_type: "application/pdf" },
@@ -682,7 +811,6 @@ Return ONLY valid JSON matching this schema (no markdown, no code blocks):
 
     let parsed;
     try {
-      // Clean potential markdown wrapping
       let cleaned = content.trim();
       if (cleaned.startsWith("```")) {
         cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");

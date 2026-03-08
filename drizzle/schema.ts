@@ -38,6 +38,8 @@ export const companySettings = mysqlTable("company_settings", {
   fax: varchar("fax", { length: 20 }),
   email: varchar("email", { length: 255 }),
   logoUrl: text("logoUrl"), // CDN URL to logo
+  pdfPrimaryColor: varchar("pdfPrimaryColor", { length: 7 }).default("#0f2b46"), // Navy/header color
+  pdfAccentColor: varchar("pdfAccentColor", { length: 7 }).default("#2563eb"), // Accent/highlight color
   standardTerms: text("standardTerms"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

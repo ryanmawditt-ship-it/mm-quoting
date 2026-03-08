@@ -228,3 +228,8 @@
 - [x] Add archive/unarchive DB helpers and tRPC procedures for suppliers
 - [x] Add tabbed Active/Archived UI to SuppliersPage with archive/restore actions
 - [x] Filter archived suppliers from active supplier lists (dropdowns, project assignment, etc.)
+- [x] Add company branding fields to Settings: company name, ABN, address, phone, email
+- [x] Add logo upload to Settings for PDF header
+- [x] Add PDF color scheme picker to Settings
+- [x] Update PDF generation to use company settings for header (name, ABN, address, logo)
+- [x] Update PDF generation to use custom color scheme

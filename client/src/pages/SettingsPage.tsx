@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Building2, Users, Plus, X, Save, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Building2, Users, Plus, Save, Loader2, Upload, Palette, Image } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -44,10 +44,14 @@ export default function SettingsPage() {
     fax: "",
     email: "",
     logoUrl: "",
+    pdfPrimaryColor: "#0f2b46",
+    pdfAccentColor: "#2563eb",
     standardTerms: "",
   });
 
   const [newSp, setNewSp] = useState({ name: "", email: "" });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings) {
@@ -59,6 +63,8 @@ export default function SettingsPage() {
         fax: settings.fax || "",
         email: settings.email || "",
         logoUrl: settings.logoUrl || "",
+        pdfPrimaryColor: settings.pdfPrimaryColor || "#0f2b46",
+        pdfAccentColor: settings.pdfAccentColor || "#2563eb",
         standardTerms: settings.standardTerms || "",
       });
     }
@@ -73,6 +79,43 @@ export default function SettingsPage() {
     updateSettings.mutate(form);
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Logo must be under 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload-logo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const { url } = await response.json();
+      setForm({ ...form, logoUrl: url });
+      toast.success("Logo uploaded — click Save Settings to apply");
+    } catch {
+      toast.error("Failed to upload logo. You can also paste a URL directly.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleAddSp = () => {
     if (!newSp.name.trim()) {
       toast.error("Salesperson name is required");
@@ -80,6 +123,16 @@ export default function SettingsPage() {
     }
     createSalesperson.mutate(newSp);
   };
+
+  // Preset color themes
+  const colorPresets = [
+    { name: "Navy Blue", primary: "#0f2b46", accent: "#2563eb" },
+    { name: "Charcoal", primary: "#1a1a2e", accent: "#e94560" },
+    { name: "Forest", primary: "#1b4332", accent: "#40916c" },
+    { name: "Slate", primary: "#334155", accent: "#6366f1" },
+    { name: "Burgundy", primary: "#4a0404", accent: "#c0392b" },
+    { name: "Midnight", primary: "#0c1445", accent: "#f39c12" },
+  ];
 
   if (settingsLoading) {
     return (
@@ -94,23 +147,23 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Company Settings</h1>
         <p className="text-muted-foreground mt-1">
-          Configure your company details that appear on customer quotes
+          Configure your company details, logo, and branding for customer quote PDFs
         </p>
       </div>
 
-      {/* Company Details */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Company Details</CardTitle>
-          </div>
-          <CardDescription>
-            These details will appear on your customer-facing quote PDFs
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSave} className="space-y-4">
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* Company Details */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Company Details</CardTitle>
+            </div>
+            <CardDescription>
+              These details appear in the header of your customer-facing quote PDFs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
                 <Label htmlFor="companyName">Company Name *</Label>
@@ -169,23 +222,200 @@ export default function SettingsPage() {
                 rows={2}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="logoUrl">Logo URL</Label>
-              <Input
-                id="logoUrl"
-                placeholder="https://cdn.example.com/logo.png"
-                value={form.logoUrl}
-                onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter a URL to your company logo. This will appear on generated quote PDFs.
-              </p>
+          </CardContent>
+        </Card>
+
+        {/* Logo & Branding */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Image className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Logo & Branding</CardTitle>
+            </div>
+            <CardDescription>
+              Upload your company logo and choose PDF color scheme
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Logo Upload */}
+            <div className="space-y-3">
+              <Label>Company Logo</Label>
+              <div className="flex items-start gap-4">
+                {/* Logo preview */}
+                <div className="w-32 h-20 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/30 shrink-0 overflow-hidden">
+                  {form.logoUrl ? (
+                    <img
+                      src={form.logoUrl}
+                      alt="Company logo"
+                      className="max-w-full max-h-full object-contain p-1"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <Image className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                      <span className="text-xs text-muted-foreground">No logo</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Logo
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    PNG, JPG, or SVG. Max 5MB. Recommended: 300x100px or similar wide format.
+                  </p>
+                  <div className="space-y-1">
+                    <Label htmlFor="logoUrl" className="text-xs text-muted-foreground">Or paste URL directly:</Label>
+                    <Input
+                      id="logoUrl"
+                      placeholder="https://cdn.example.com/logo.png"
+                      value={form.logoUrl}
+                      onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Separator />
 
+            {/* Color Scheme */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4 text-muted-foreground" />
+                <Label>PDF Color Scheme</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Choose colors for your quote PDF headers, accents, and table styling.
+              </p>
+
+              {/* Preset themes */}
+              <div className="grid grid-cols-3 gap-2">
+                {colorPresets.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() =>
+                      setForm({ ...form, pdfPrimaryColor: preset.primary, pdfAccentColor: preset.accent })
+                    }
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border text-left text-xs transition-all hover:shadow-sm ${
+                      form.pdfPrimaryColor === preset.primary && form.pdfAccentColor === preset.accent
+                        ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="flex gap-1 shrink-0">
+                      <div
+                        className="w-5 h-5 rounded-full border"
+                        style={{ backgroundColor: preset.primary }}
+                      />
+                      <div
+                        className="w-5 h-5 rounded-full border"
+                        style={{ backgroundColor: preset.accent }}
+                      />
+                    </div>
+                    <span className="font-medium truncate">{preset.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom color pickers */}
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="pdfPrimaryColor" className="text-sm">Primary Color</Label>
+                  <p className="text-xs text-muted-foreground">Headers, titles, table header background</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="pdfPrimaryColor"
+                      value={form.pdfPrimaryColor}
+                      onChange={(e) => setForm({ ...form, pdfPrimaryColor: e.target.value })}
+                      className="w-10 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={form.pdfPrimaryColor}
+                      onChange={(e) => setForm({ ...form, pdfPrimaryColor: e.target.value })}
+                      className="font-mono text-sm w-28"
+                      maxLength={7}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pdfAccentColor" className="text-sm">Accent Color</Label>
+                  <p className="text-xs text-muted-foreground">Top bar, badges, highlights, type codes</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="pdfAccentColor"
+                      value={form.pdfAccentColor}
+                      onChange={(e) => setForm({ ...form, pdfAccentColor: e.target.value })}
+                      className="w-10 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={form.pdfAccentColor}
+                      onChange={(e) => setForm({ ...form, pdfAccentColor: e.target.value })}
+                      className="font-mono text-sm w-28"
+                      maxLength={7}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live preview strip */}
+              <div className="mt-3 rounded-lg border overflow-hidden">
+                <div className="h-1.5" style={{ backgroundColor: form.pdfAccentColor }} />
+                <div className="p-3 flex items-center justify-between" style={{ backgroundColor: form.pdfPrimaryColor }}>
+                  <span className="text-white text-sm font-bold">{form.companyName || "Company Name"}</span>
+                  <span className="text-white/80 text-xs">QUOTATION</span>
+                </div>
+                <div className="p-3 bg-background">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span style={{ color: form.pdfAccentColor }} className="font-semibold">Type 1L</span>
+                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground">Sample line item preview</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Terms & Conditions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Terms & Conditions</CardTitle>
+            <CardDescription>
+              Standard terms that appear at the bottom of every customer quote PDF
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
-              <Label htmlFor="standardTerms">Standard Terms & Conditions</Label>
               <Textarea
                 id="standardTerms"
                 placeholder="Enter your standard quote terms and conditions..."
@@ -193,29 +423,27 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, standardTerms: e.target.value })}
                 rows={6}
               />
-              <p className="text-xs text-muted-foreground">
-                These terms will appear at the bottom of every customer quote PDF.
-              </p>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex justify-end pt-2">
-              <Button type="submit" disabled={updateSettings.isPending}>
-                {updateSettings.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Settings
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button type="submit" size="lg" disabled={updateSettings.isPending}>
+            {updateSettings.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save All Settings
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
 
       {/* Salespersons */}
       <Card>

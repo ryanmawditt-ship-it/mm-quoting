@@ -70,6 +70,8 @@ export const appRouter = router({
           fax: z.string().optional(),
           email: z.string().optional(),
           logoUrl: z.string().optional(),
+          pdfPrimaryColor: z.string().optional(),
+          pdfAccentColor: z.string().optional(),
           standardTerms: z.string().optional(),
         })
       )

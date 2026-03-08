@@ -835,6 +835,35 @@ Return ONLY valid JSON matching this schema (no markdown, no code blocks):
 });
 
 // ============================================================
+// POST /api/upload-logo
+// Uploads a company logo image to S3
+// ============================================================
+apiRouter.post("/api/upload-logo", upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "Missing file" });
+      return;
+    }
+
+    const ext = file.originalname.split(".").pop() || "png";
+    const fileKey = `logos/${user.id}/${nanoid()}-logo.${ext}`;
+    const { url } = await storagePut(fileKey, file.buffer, file.mimetype);
+
+    res.json({ success: true, url });
+  } catch (error) {
+    console.error("[UploadLogo] Error:", error);
+    res.status(500).json({ error: "Failed to upload logo" });
+  }
+});
+
+// ============================================================
 // PDF Generation Function — Modern Professional Design
 // ============================================================
 interface QuotePDFData {
@@ -871,19 +900,38 @@ interface QuotePDFData {
   specialInstructions: string;
 }
 
-// Colour palette
-const C = {
+// Colour palette — defaults, overridden by settings in generateQuotePDF
+const DEFAULT_COLORS = {
   navy: "#0f2b46",
   accent: "#2563eb",
-  accentLight: "#eff6ff",
-  dark: "#1e293b",
-  body: "#334155",
-  muted: "#64748b",
-  light: "#94a3b8",
-  border: "#e2e8f0",
-  rowAlt: "#f8fafc",
-  white: "#ffffff",
 };
+
+function buildColorPalette(settings?: { pdfPrimaryColor?: string | null; pdfAccentColor?: string | null }) {
+  const navy = settings?.pdfPrimaryColor || DEFAULT_COLORS.navy;
+  const accent = settings?.pdfAccentColor || DEFAULT_COLORS.accent;
+  // Derive a light tint from the accent color for backgrounds
+  const hexToRgb = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return { r, g, b };
+  };
+  const rgb = hexToRgb(accent);
+  // Create a very light tint (10% opacity on white)
+  const accentLight = `#${Math.round(rgb.r * 0.1 + 255 * 0.9).toString(16).padStart(2, '0')}${Math.round(rgb.g * 0.1 + 255 * 0.9).toString(16).padStart(2, '0')}${Math.round(rgb.b * 0.1 + 255 * 0.9).toString(16).padStart(2, '0')}`;
+  return {
+    navy,
+    accent,
+    accentLight,
+    dark: "#1e293b",
+    body: "#334155",
+    muted: "#64748b",
+    light: "#94a3b8",
+    border: "#e2e8f0",
+    rowAlt: "#f8fafc",
+    white: "#ffffff",
+  };
+}
 
 function fmtMoney(n: number): string {
   return n.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -916,6 +964,9 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       const PH = doc.page.height;  // 841.89 for A4
       const CW = PW - ML - MR;    // content width
       const settings = data.settings;
+
+      // Build dynamic color palette from settings
+      const C = buildColorPalette(settings);
 
       // ================================================================
       // Helper: draw the table header row (reused on each page)

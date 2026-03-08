@@ -205,3 +205,7 @@
 - [x] Replace slow drag-to-reorder in Step 2 with fast numbered sequence inputs
 - [x] Add quick actions: Move to Top, Move Up, Move Down, Move to Bottom
 - [x] Allow typing a sequence number to instantly reposition a line
+- [x] Customer schedule import: backend API endpoint to extract type codes from customer tender PDFs/images using AI
+- [x] Customer schedule import: frontend UI with Import Schedule button and extracted type preview badges
+- [x] Customer schedule import: auto-sort logic with fuzzy type code matching (normalises TYPE prefix, handles partial matches)
+- [x] Customer schedule import: 16 unit tests for normalisation, fuzzy matching, and auto-sort logic

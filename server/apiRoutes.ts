@@ -555,6 +555,158 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
 });
 
 // ============================================================
+// POST /api/extract-customer-schedule
+// Extracts type codes and their order from a customer's tender/schedule document
+// ============================================================
+apiRouter.post("/api/extract-customer-schedule", upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "Missing file" });
+      return;
+    }
+
+    // Upload to S3 for AI processing
+    const fileKey = `customer-schedules/${user.id}/${nanoid()}-${file.originalname}`;
+    const contentType = file.mimetype || "application/pdf";
+    const { url: fileUrl } = await storagePut(fileKey, file.buffer, contentType);
+
+    // Determine the mime type for the AI call
+    const isPdf = file.mimetype === "application/pdf";
+    const isImage = file.mimetype?.startsWith("image/");
+
+    // Build the content array for the AI
+    const userContent: any[] = [
+      {
+        type: "text",
+        text: `Extract the TYPE CODES / FIXTURE TYPES and their ORDER from this customer tender schedule or lighting layout document.
+
+This is a customer's lighting schedule that lists the types of lights they need for a project. Each type has a code like "TYPE 1L", "TYPE 1P", "TYPE 2S", "LED 1", "D7", "PL1", "1S", "2S", "1E", etc.
+
+I need you to extract:
+1. Every type code mentioned in the document, in the EXACT ORDER they appear
+2. Any description or name associated with each type (if available)
+3. Any quantity mentioned for each type (if available)
+
+IMPORTANT RULES:
+- Preserve the exact order as listed in the document — this order is critical
+- Normalise type codes: remove "TYPE " prefix variations ("Type ", "TYPE ", "type ") but keep the core code
+- Include ALL types, even if they appear in headers, tables, or schedules
+- If the same type appears multiple times, only include it once (first occurrence determines position)
+- Common type code patterns: "1L", "1P", "2S", "LED 1", "LED 2", "D7", "W2", "LS3", "PL1", "1E", "2E", "3E", "FREIGHT"
+- The document might be a table, a schedule, a drawing legend, or a specification list
+
+Return ONLY valid JSON matching this schema (no markdown, no code blocks):
+{
+  "types": [
+    { "code": "1L", "description": "Downlight - Recessed", "quantity": 24 },
+    { "code": "1P", "description": "Pendant Light", "quantity": 6 }
+  ],
+  "documentTitle": "Lighting Schedule" or null,
+  "totalTypes": 12
+}`,
+      },
+    ];
+
+    if (isPdf) {
+      userContent.push({
+        type: "file_url",
+        file_url: { url: fileUrl, mime_type: "application/pdf" },
+      });
+    } else if (isImage) {
+      userContent.push({
+        type: "image_url",
+        image_url: { url: fileUrl, detail: "high" },
+      });
+    } else {
+      // Try as PDF anyway
+      userContent.push({
+        type: "file_url",
+        file_url: { url: fileUrl, mime_type: "application/pdf" },
+      });
+    }
+
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert at reading construction and electrical tender documents, lighting schedules, and fixture specifications. Extract type codes and their order accurately. Return ONLY valid JSON, no markdown.",
+        },
+        {
+          role: "user",
+          content: userContent,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "customer_schedule",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              types: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    code: { type: "string", description: "The type/fixture code (e.g. 1L, 1P, 2S, LED 1)" },
+                    description: { type: ["string", "null"], description: "Description of the type if available" },
+                    quantity: { type: ["number", "null"], description: "Quantity if mentioned" },
+                  },
+                  required: ["code", "description", "quantity"],
+                  additionalProperties: false,
+                },
+              },
+              documentTitle: { type: ["string", "null"], description: "Title of the document if identifiable" },
+              totalTypes: { type: "number", description: "Total number of unique types found" },
+            },
+            required: ["types", "documentTitle", "totalTypes"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    const content = response.choices?.[0]?.message?.content as string | undefined;
+    if (!content) {
+      res.status(500).json({ error: "AI did not return any content" });
+      return;
+    }
+
+    let parsed;
+    try {
+      // Clean potential markdown wrapping
+      let cleaned = content.trim();
+      if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      }
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      console.error("[CustomerSchedule] Failed to parse AI response:", content);
+      res.status(500).json({ error: "Failed to parse extracted data" });
+      return;
+    }
+
+    res.json({
+      success: true,
+      types: parsed.types || [],
+      documentTitle: parsed.documentTitle || null,
+      totalTypes: parsed.totalTypes || parsed.types?.length || 0,
+    });
+  } catch (error) {
+    console.error("[CustomerSchedule] Error:", error);
+    res.status(500).json({ error: "Failed to extract customer schedule. Please try again." });
+  }
+});
+
+// ============================================================
 // PDF Generation Function — Modern Professional Design
 // ============================================================
 interface QuotePDFData {

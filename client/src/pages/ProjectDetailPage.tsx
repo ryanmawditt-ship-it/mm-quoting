@@ -66,6 +66,9 @@ import {
   ArrowDown,
   ChevronsUp,
   ChevronsDown,
+  FileUp,
+  ListOrdered,
+  Sparkles,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -1898,6 +1901,12 @@ function QuoteBuilder({
     return deliveryNotes.length > 0 ? deliveryNotes.join("\n\n") : "";
   });
 
+  // Customer schedule import state
+  const [importingSchedule, setImportingSchedule] = useState(false);
+  const [importedSchedule, setImportedSchedule] = useState<{ code: string; description: string | null; quantity: number | null }[] | null>(null);
+  const [scheduleDocTitle, setScheduleDocTitle] = useState<string | null>(null);
+  const scheduleFileRef = useRef<HTMLInputElement>(null);
+
   // Margin persistence mutations
   const updateMarginMutation = trpc.lineItems.updateMargin.useMutation();
   const updateMarginsMutation = trpc.lineItems.updateMargins.useMutation();
@@ -2048,6 +2057,131 @@ function QuoteBuilder({
         }
       );
     }
+  };
+
+  // ============================================================
+  // Customer Schedule Import & Auto-Sort
+  // ============================================================
+  const handleImportSchedule = async (file: globalThis.File) => {
+    if (!file) return;
+    setImportingSchedule(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/extract-customer-schedule", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to extract schedule");
+      }
+
+      const result = await response.json();
+      if (result.types && result.types.length > 0) {
+        setImportedSchedule(result.types);
+        setScheduleDocTitle(result.documentTitle);
+        toast.success(`Extracted ${result.types.length} type codes from ${result.documentTitle || "customer schedule"}`);
+      } else {
+        toast.error("No type codes found in the document. Try a different file.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to import customer schedule");
+      console.error(error);
+    } finally {
+      setImportingSchedule(false);
+      if (scheduleFileRef.current) scheduleFileRef.current.value = "";
+    }
+  };
+
+  // Normalise a type code for fuzzy matching
+  const normaliseTypeCode = (code: string): string => {
+    return code
+      .toUpperCase()
+      .replace(/^TYPE\s+/i, "")
+      .replace(/^LUMINAIRE\s+/i, "")
+      .replace(/^FIXTURE\s+/i, "")
+      .replace(/^FTG\s+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  // Auto-sort selected items to match the imported customer schedule order
+  const autoSortBySchedule = () => {
+    if (!importedSchedule || importedSchedule.length === 0) return;
+
+    // Build a priority map from the customer schedule: normalised code -> order index
+    const schedulePriority = new Map<string, number>();
+    importedSchedule.forEach((t, idx) => {
+      const norm = normaliseTypeCode(t.code);
+      if (!schedulePriority.has(norm)) {
+        schedulePriority.set(norm, idx);
+      }
+    });
+
+    // Get current selected item IDs
+    const currentSelected = orderedItemIds.filter(id => selectedItems.has(id));
+    selectedItems.forEach((_, id) => {
+      if (!currentSelected.includes(id)) currentSelected.push(id);
+    });
+
+    // Build sortable entries with their type codes
+    const entries = currentSelected.map(id => {
+      const data = selectedItems.get(id);
+      const lineItem = allLineItems.find(({ item }) => item.id === id);
+      const rawType = data?.itemType || lineItem?.item?.type || "";
+      const normType = normaliseTypeCode(rawType);
+      return { id, normType, rawType };
+    });
+
+    // Sort: items matching schedule types come first (in schedule order),
+    // then unmatched items keep their relative order at the end
+    entries.sort((a, b) => {
+      const aPriority = schedulePriority.get(a.normType);
+      const bPriority = schedulePriority.get(b.normType);
+
+      // Try partial matching if exact match fails
+      const aMatch = aPriority !== undefined ? aPriority : findFuzzyMatch(a.normType, schedulePriority);
+      const bMatch = bPriority !== undefined ? bPriority : findFuzzyMatch(b.normType, schedulePriority);
+
+      if (aMatch !== undefined && bMatch !== undefined) return aMatch - bMatch;
+      if (aMatch !== undefined) return -1; // matched items first
+      if (bMatch !== undefined) return 1;
+      return 0; // both unmatched — keep relative order
+    });
+
+    const newOrder = entries.map(e => e.id);
+    const unselected = orderedItemIds.filter(id => !selectedItems.has(id));
+    setOrderedItemIds([...newOrder, ...unselected]);
+
+    // Count matches
+    const matchedCount = entries.filter(e => {
+      const exact = schedulePriority.get(e.normType);
+      const fuzzy = exact !== undefined ? exact : findFuzzyMatch(e.normType, schedulePriority);
+      return fuzzy !== undefined;
+    }).length;
+
+    toast.success(`Sorted ${matchedCount} of ${entries.length} items to match customer schedule order`);
+  };
+
+  // Fuzzy match: check if the item type contains or is contained by any schedule code
+  const findFuzzyMatch = (normType: string, schedulePriority: Map<string, number>): number | undefined => {
+    if (!normType) return undefined;
+    for (const [schedCode, priority] of Array.from(schedulePriority.entries())) {
+      // Exact substring match in either direction
+      if (normType.includes(schedCode) || schedCode.includes(normType)) {
+        return priority;
+      }
+      // Strip common suffixes/prefixes and try again
+      const stripped = normType.replace(/[\s\-\/]+/g, "");
+      const schedStripped = schedCode.replace(/[\s\-\/]+/g, "");
+      if (stripped === schedStripped || stripped.includes(schedStripped) || schedStripped.includes(stripped)) {
+        return priority;
+      }
+    }
+    return undefined;
   };
 
   // Calculate totals using margin formula: Sell = Cost / (1 - margin/100)
@@ -2407,6 +2541,96 @@ function QuoteBuilder({
 
       {step === 2 && (
         <>
+          {/* Customer Schedule Import — auto-sort to match customer's type order */}
+          <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <ListOrdered className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Auto-Sort from Customer Schedule</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Import the customer's lighting schedule or tender document to automatically sort items in their required order.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={scheduleFileRef}
+                  type="file"
+                  accept=".pdf,image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportSchedule(file);
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => scheduleFileRef.current?.click()}
+                  disabled={importingSchedule}
+                  className="border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
+                >
+                  {importingSchedule ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="mr-2 h-4 w-4" />
+                      Import Schedule
+                    </>
+                  )}
+                </Button>
+                {importedSchedule && importedSchedule.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={autoSortBySchedule}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Apply Order ({importedSchedule.length} types)
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Show imported schedule preview */}
+            {importedSchedule && importedSchedule.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                    {scheduleDocTitle ? `"${scheduleDocTitle}"` : "Customer Schedule"} — {importedSchedule.length} types extracted:
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-1 text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() => { setImportedSchedule(null); setScheduleDocTitle(null); }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {importedSchedule.map((t, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="secondary"
+                      className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+                    >
+                      <span className="font-mono font-bold mr-1">{idx + 1}.</span>
+                      {t.code}
+                      {t.description && <span className="ml-1 text-blue-500 dark:text-blue-400">({t.description})</span>}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Review & Reorder Table — editable Qty, Margin, quick move buttons */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">

@@ -62,6 +62,10 @@ import {
   Trash2,
   GripVertical,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUp,
+  ChevronsDown,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -1304,8 +1308,7 @@ function SortableRow({ id, lineNum, itemType, description, quantity, sellTotal }
   );
 }
 
-function SortableReviewRow({ id, lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onRemove }: {
-  id: number;
+function ReviewRow({ lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onRemove, onMoveToTop, onMoveUp, onMoveDown, onMoveToBottom, onSequenceChange, totalItems }: {
   lineNum: number;
   itemType: string;
   description: string;
@@ -1318,44 +1321,41 @@ function SortableReviewRow({ id, lineNum, itemType, description, productCode, qu
   onQuantityChange: (qty: number) => void;
   onMarginChange: (margin: number) => void;
   onRemove: () => void;
+  onMoveToTop: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onMoveToBottom: () => void;
+  onSequenceChange: (newPos: number) => void;
+  totalItems: number;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.8 : 1,
-  };
-
   return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      className={`border-b last:border-0 ${
-        isDragging ? "bg-primary/10 shadow-lg" : "hover:bg-muted/30"
-      }`}
-    >
-      <td className="p-2 text-center">
-        <button
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
-      </td>
-      <td className="p-2 text-center">
-        <span className="font-mono text-xs font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5">
-          {lineNum}
-        </span>
+    <tr className="border-b last:border-0 hover:bg-muted/30">
+      <td className="p-2">
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onMoveToTop} disabled={lineNum === 1} title="Move to top">
+            <ChevronsUp className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onMoveUp} disabled={lineNum === 1} title="Move up">
+            <ArrowUp className="h-3 w-3" />
+          </Button>
+          <Input
+            type="number"
+            className="w-12 h-7 text-center text-xs font-mono font-bold"
+            value={lineNum}
+            onChange={(e) => {
+              const val = parseInt(e.target.value);
+              if (val >= 1 && val <= totalItems) onSequenceChange(val);
+            }}
+            min={1}
+            max={totalItems}
+          />
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onMoveDown} disabled={lineNum === totalItems} title="Move down">
+            <ArrowDown className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onMoveToBottom} disabled={lineNum === totalItems} title="Move to bottom">
+            <ChevronsDown className="h-3 w-3" />
+          </Button>
+        </div>
       </td>
       <td className="p-2">
         {itemType && <Badge variant="outline" className="text-xs">{itemType}</Badge>}
@@ -2134,11 +2134,7 @@ function QuoteBuilder({
 
   const [step, setStep] = useState<1 | 2>(1);
 
-  // DnD sensors - must be at top level (not inside conditional JSX)
-  const reviewSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // Note: DnD removed from Step 2 in favour of quick-move buttons and sequence inputs
 
   // Step 2: ordered selected items for the review table
   const orderedSelectedItems = useMemo(() => {
@@ -2411,81 +2407,71 @@ function QuoteBuilder({
 
       {step === 2 && (
         <>
-          {/* Review & Reorder Table — editable Qty, Margin, draggable rows */}
+          {/* Review & Reorder Table — editable Qty, Margin, quick move buttons */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Review & Reorder ({orderedSelectedItems.length} items)</h3>
-              <p className="text-xs text-muted-foreground">Drag rows to reorder. Edit Qty and Margin directly.</p>
+              <p className="text-xs text-muted-foreground">Use arrows to reorder or type a line number. Edit Qty and Margin directly.</p>
             </div>
 
-            <DndContext
-              sensors={reviewSensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(event) => {
-                const { active, over } = event;
-                if (over && active.id !== over.id) {
-                  const currentOrder = orderedItemIds.filter(id => selectedItems.has(id));
-                  const oldIndex = currentOrder.indexOf(active.id as number);
-                  const newIndex = currentOrder.indexOf(over.id as number);
-                  const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
-                  // Preserve unselected items in orderedItemIds
-                  const unselected = orderedItemIds.filter(id => !selectedItems.has(id));
-                  setOrderedItemIds([...newOrder, ...unselected]);
-                }
-              }}
-            >
-              <SortableContext
-                items={orderedSelectedItems.map(x => x.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-3 text-left w-10"></th>
-                        <th className="p-3 text-center font-medium text-muted-foreground w-10">#</th>
-                        <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                        <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
-                        <th className="p-3 text-right font-medium text-muted-foreground w-24">Qty</th>
-                        <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
-                        <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
-                        <th className="p-3 text-right font-medium text-muted-foreground">Sell</th>
-                        <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
-                        <th className="p-3 text-center font-medium text-muted-foreground w-10"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orderedSelectedItems.map(({ id: itemId, data, lineItem }, idx) => {
-                        const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
-                        return (
-                          <SortableReviewRow
-                            key={itemId}
-                            id={itemId}
-                            lineNum={idx + 1}
-                            itemType={data.itemType}
-                            description={lineItem?.item?.description || data.description}
-                            productCode={lineItem?.item?.productCode || ""}
-                            quantity={data.quantity}
-                            costPrice={data.costPrice}
-                            margin={data.margin}
-                            sellPrice={sellPrice}
-                            lineTotal={sellPrice * data.quantity}
-                            onQuantityChange={(qty) => updateItemQuantity(itemId, qty)}
-                            onMarginChange={(margin) => updateItemMargin(itemId, margin)}
-                            onRemove={() => {
-                              const newSelected = new Map(selectedItems);
-                              newSelected.delete(itemId);
-                              setSelectedItems(newSelected);
-                              setOrderedItemIds(prev => prev.filter(id => id !== itemId));
-                            }}
-                          />
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </SortableContext>
-            </DndContext>
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-3 text-left font-medium text-muted-foreground">Order</th>
+                    <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+                    <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground w-24">Qty</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">Sell</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
+                    <th className="p-3 text-center font-medium text-muted-foreground w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderedSelectedItems.map(({ id: itemId, data, lineItem }, idx) => {
+                    const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
+                    const moveItem = (fromIdx: number, toIdx: number) => {
+                      const currentOrder = orderedItemIds.filter((id: number) => selectedItems.has(id));
+                      const item = currentOrder[fromIdx];
+                      const newOrder = currentOrder.filter((_: number, i: number) => i !== fromIdx);
+                      newOrder.splice(toIdx, 0, item);
+                      const unselected = orderedItemIds.filter((id: number) => !selectedItems.has(id));
+                      setOrderedItemIds([...newOrder, ...unselected]);
+                    };
+                    return (
+                      <ReviewRow
+                        key={itemId}
+                        lineNum={idx + 1}
+                        itemType={data.itemType}
+                        description={lineItem?.item?.description || data.description}
+                        productCode={lineItem?.item?.productCode || ""}
+                        quantity={data.quantity}
+                        costPrice={data.costPrice}
+                        margin={data.margin}
+                        sellPrice={sellPrice}
+                        lineTotal={sellPrice * data.quantity}
+                        totalItems={orderedSelectedItems.length}
+                        onQuantityChange={(qty: number) => updateItemQuantity(itemId, qty)}
+                        onMarginChange={(margin: number) => updateItemMargin(itemId, margin)}
+                        onRemove={() => {
+                          const newSelected = new Map(selectedItems);
+                          newSelected.delete(itemId);
+                          setSelectedItems(newSelected);
+                          setOrderedItemIds(prev => prev.filter((id: number) => id !== itemId));
+                        }}
+                        onMoveToTop={() => moveItem(idx, 0)}
+                        onMoveUp={() => moveItem(idx, idx - 1)}
+                        onMoveDown={() => moveItem(idx, idx + 1)}
+                        onMoveToBottom={() => moveItem(idx, orderedSelectedItems.length - 1)}
+                        onSequenceChange={(newPos: number) => moveItem(idx, newPos - 1)}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Totals */}

@@ -202,3 +202,6 @@
 - [x] Add backend procedure to delete a supplier (with cascade check for existing quotes)
 - [x] Add edit dialog/inline editing on Suppliers page
 - [x] Add delete button with confirmation dialog on Suppliers page
+- [x] Replace slow drag-to-reorder in Step 2 with fast numbered sequence inputs
+- [x] Add quick actions: Move to Top, Move Up, Move Down, Move to Bottom
+- [x] Allow typing a sequence number to instantly reposition a line

@@ -102,9 +102,15 @@ export async function getCompanySettings(userId: number) {
 export async function upsertCompanySettings(userId: number, data: Omit<InsertCompanySettings, 'userId'>) {
   const db = await getDb();
   if (!db) return;
-  await db.insert(companySettings).values({ ...data, userId }).onDuplicateKeyUpdate({
-    set: data,
-  });
+  // Check if settings already exist for this user
+  const existing = await db.select({ id: companySettings.id }).from(companySettings).where(eq(companySettings.userId, userId)).limit(1);
+  if (existing.length > 0) {
+    // Update existing row
+    await db.update(companySettings).set(data).where(eq(companySettings.id, existing[0].id));
+  } else {
+    // Insert new row
+    await db.insert(companySettings).values({ ...data, userId });
+  }
 }
 
 /**

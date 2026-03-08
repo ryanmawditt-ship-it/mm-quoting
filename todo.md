@@ -233,3 +233,4 @@
 - [x] Add PDF color scheme picker to Settings
 - [x] Update PDF generation to use company settings for header (name, ABN, address, logo)
 - [x] Update PDF generation to use custom color scheme
+- [x] Fix: Settings page save reverts to old values instead of persisting changes

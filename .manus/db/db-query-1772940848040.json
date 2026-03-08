@@ -1,0 +1,16 @@
+{
+  "query": "SELECT userId, COUNT(*) as cnt, MIN(id) as first_id, MAX(id) as last_id FROM company_settings GROUP BY userId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT userId, COUNT(*) as cnt, MIN(id) as first_id, MAX(id) as last_id FROM company_settings GROUP BY userId;",
+  "rows": [
+    {
+      "userId": "1",
+      "cnt": "45",
+      "first_id": "1",
+      "last_id": "240004"
+    }
+  ],
+  "messages": [],
+  "stdout": "userId\tcnt\tfirst_id\tlast_id\n1\t45\t1\t240004\n",
+  "stderr": "",
+  "execution_time_ms": 1536
+}

@@ -1,0 +1,415 @@
+{
+  "query": "SELECT id, userId, companyName, address, phone, email, updatedAt FROM company_settings ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, userId, companyName, address, phone, email, updatedAt FROM company_settings ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 07:18:41"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 07:25:19"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 07:25:48"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 07:30:04"
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 07:38:39"
+    },
+    {
+      "id": "30001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 07:58:20"
+    },
+    {
+      "id": "30002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 08:12:07"
+    },
+    {
+      "id": "30003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 08:24:08"
+    },
+    {
+      "id": "30004",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 08:32:38"
+    },
+    {
+      "id": "30005",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 08:47:48"
+    },
+    {
+      "id": "30006",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-06 09:02:56"
+    },
+    {
+      "id": "60001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 01:12:01"
+    },
+    {
+      "id": "60002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 01:26:35"
+    },
+    {
+      "id": "60003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 01:35:59"
+    },
+    {
+      "id": "60004",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 01:50:00"
+    },
+    {
+      "id": "60005",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 02:09:07"
+    },
+    {
+      "id": "60006",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 02:10:14"
+    },
+    {
+      "id": "60007",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 02:11:00"
+    },
+    {
+      "id": "60008",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 02:12:04"
+    },
+    {
+      "id": "90001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 09:55:31"
+    },
+    {
+      "id": "90002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 10:07:48"
+    },
+    {
+      "id": "90003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 10:17:19"
+    },
+    {
+      "id": "90004",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 10:30:37"
+    },
+    {
+      "id": "90005",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 10:38:17"
+    },
+    {
+      "id": "90006",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 10:46:53"
+    },
+    {
+      "id": "90007",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 10:53:14"
+    },
+    {
+      "id": "90008",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 11:15:05"
+    },
+    {
+      "id": "90009",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 11:28:44"
+    },
+    {
+      "id": "90010",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 11:37:42"
+    },
+    {
+      "id": "120001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 23:45:52"
+    },
+    {
+      "id": "120002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 23:46:28"
+    },
+    {
+      "id": "120003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-07 23:52:34"
+    },
+    {
+      "id": "150001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 00:43:23"
+    },
+    {
+      "id": "150002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 00:52:36"
+    },
+    {
+      "id": "150003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 01:02:58"
+    },
+    {
+      "id": "150004",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 01:09:01"
+    },
+    {
+      "id": "150005",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 01:27:37"
+    },
+    {
+      "id": "180001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 02:09:33"
+    },
+    {
+      "id": "180002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 02:23:30"
+    },
+    {
+      "id": "180003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 02:29:54"
+    },
+    {
+      "id": "210001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 03:02:26"
+    },
+    {
+      "id": "240001",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "0439699885",
+      "email": "ryan.mawditt@mmem.com.au",
+      "updatedAt": "2026-03-08 03:27:52"
+    },
+    {
+      "id": "240002",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "ryan.mawditt@mmem.com.au",
+      "updatedAt": "2026-03-08 03:29:58"
+    },
+    {
+      "id": "240003",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "7 Bimbil Street, Albion QLD 4010",
+      "phone": "0439699885",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 03:30:20"
+    },
+    {
+      "id": "240004",
+      "userId": "1",
+      "companyName": "MM Albion",
+      "address": "657 Coronation Drive, Toowong QLD 4066",
+      "phone": "(07) 3252 2306",
+      "email": "quotes@mmalbion.com.au",
+      "updatedAt": "2026-03-08 03:30:45"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tcompanyName\taddress\tphone\temail\tupdatedAt\n1\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 07:18:41\n2\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 07:25:19\n3\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 07:25:48\n4\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 07:30:04\n5\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 07:38:39\n30001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 07:58:20\n30002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 08:12:07\n30003\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 08:24:08\n30004\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 08:32:38\n30005\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 08:47:48\n30006\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-06 09:02:56\n60001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 01:12:01\n60002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 01:26:35\n60003\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 01:35:59\n60004\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 01:50:00\n60005\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 02:09:07\n60006\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 02:10:14\n60007\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 02:11:00\n60008\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 02:12:04\n90001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 09:55:31\n90002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 10:07:48\n90003\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 10:17:19\n90004\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 10:30:37\n90005\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 10:38:17\n90006\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 10:46:53\n90007\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 10:53:14\n90008\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 11:15:05\n90009\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 11:28:44\n90010\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 11:37:42\n120001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 23:45:52\n120002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 23:46:28\n120003\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-07 23:52:34\n150001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 00:43:23\n150002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 00:52:36\n150003\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 01:02:58\n150004\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 01:09:01\n150005\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 01:27:37\n180001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 02:09:33\n180002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 02:23:30\n180003\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 02:29:54\n210001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 03:02:26\n240001\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t0439699885\tryan.mawditt@mmem.com.au\t2026-03-08 03:27:52\n240002\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tryan.mawditt@mmem.com.au\t2026-03-08 03:29:58\n240003\t1\tMM Albion\t7 Bimbil Street, Albion QLD 4010\t0439699885\tquotes@mmalbion.com.au\t2026-03-08 03:30:20\n240004\t1\tMM Albion\t657 Coronation Drive, Toowong QLD 4066\t(07) 3252 2306\tquotes@mmalbion.com.au\t2026-03-08 03:30:45\n",
+  "stderr": "",
+  "execution_time_ms": 1570
+}

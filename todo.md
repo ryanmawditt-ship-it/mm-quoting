@@ -217,3 +217,4 @@
 - [x] Allow selecting specific lines to change their margin independently after global is set
 - [x] Fix auto-sort: bundled items should stay with their type group in correct position, not pushed to end
 - [x] Highlight quantity mismatches between customer schedule and supplier quotes in Step 2 review table
+- [x] Fix PDF generation: bundled items should appear in the user's chosen order, not pushed to end of quote

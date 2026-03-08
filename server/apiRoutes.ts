@@ -1123,38 +1123,36 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       let totalExclGst = 0;
       let totalGst = 0;
 
-      // Group line items by type for the PDF
-      interface TypeGroup {
-        type: string;
+      // Build consecutive type groups that respect the exact user-defined order.
+      // A "group" is a run of consecutive items sharing the same non-empty type code.
+      // Items with no type code are standalone (rendered flat).
+      interface ConsecutiveGroup {
+        type: string;          // "" for standalone items
         items: typeof data.lineItems;
         groupTotal: number;
       }
-      const pdfTypeGroups: TypeGroup[] = [];
-      const pdfGroupMap = new Map<string, TypeGroup>();
+      const consecutiveGroups: ConsecutiveGroup[] = [];
 
       for (const item of data.lineItems) {
         const typeKey = item.itemType || "";
-        if (!pdfGroupMap.has(typeKey)) {
-          const g: TypeGroup = { type: typeKey, items: [], groupTotal: 0 };
-          pdfGroupMap.set(typeKey, g);
-          pdfTypeGroups.push(g);
+        const lastGroup = consecutiveGroups[consecutiveGroups.length - 1];
+
+        if (typeKey && lastGroup && lastGroup.type === typeKey) {
+          // Same type as previous item — extend the current group
+          lastGroup.items.push(item);
+          lastGroup.groupTotal += item.sellPrice * item.quantity;
+        } else {
+          // New group (different type, or no type)
+          consecutiveGroups.push({
+            type: typeKey,
+            items: [item],
+            groupTotal: item.sellPrice * item.quantity,
+          });
         }
-        const group = pdfGroupMap.get(typeKey)!;
-        group.items.push(item);
-        group.groupTotal += item.sellPrice * item.quantity;
       }
 
-      // Only group types with 3+ items; types with <3 items render flat
-      const groupedPdfTypes: TypeGroup[] = [];
-      const flatPdfItems: typeof data.lineItems = [];
-      for (const group of pdfTypeGroups) {
-        if (group.type === "" || group.items.length < 3) {
-          flatPdfItems.push(...group.items);
-        } else {
-          groupedPdfTypes.push(group);
-        }
-      }
-      const useGroupedPdf = groupedPdfTypes.length > 0;
+      // Decide which consecutive groups get a visual header (3+ items of same type)
+      const hasAnyGroupHeaders = consecutiveGroups.some(g => g.type !== "" && g.items.length >= 3);
 
       let rowCounter = 0;
 
@@ -1234,17 +1232,14 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         tableY += rowH;
       };
 
-      if (useGroupedPdf) {
-        // Mixed rendering: flat items first, then grouped types (3+ items)
-        let lineNum = 1;
+      // Render items in exact user-defined order, with optional group headers
+      // for consecutive runs of 3+ items sharing the same type code.
+      let lineNum = 1;
 
-        // Render flat items first
-        for (const item of flatPdfItems) {
-          drawItemRow(item, lineNum++);
-        }
+      for (const group of consecutiveGroups) {
+        const showGroupHeader = hasAnyGroupHeaders && group.type !== "" && group.items.length >= 3;
 
-        // Render grouped types
-        for (const group of groupedPdfTypes) {
+        if (showGroupHeader) {
           // Draw type group header row — total price only, no qty
           const groupHeaderH = 24;
           ensurePageSpace(groupHeaderH);
@@ -1276,16 +1271,11 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
 
           tableY += groupHeaderH;
           rowCounter = 0; // Reset alternating for each group
-
-          // Draw individual items in this group
-          for (const item of group.items) {
-            drawItemRow(item, lineNum++);
-          }
         }
-      } else {
-        // Flat rendering (no meaningful type groups)
-        for (let i = 0; i < data.lineItems.length; i++) {
-          drawItemRow(data.lineItems[i], i + 1);
+
+        // Draw individual items in this group (or standalone items)
+        for (const item of group.items) {
+          drawItemRow(item, lineNum++);
         }
       }
 

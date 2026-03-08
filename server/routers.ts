@@ -27,6 +27,9 @@ import {
   updateLineItemMargin,
   updateLineItemMargins,
   deleteProject,
+  getArchivedProjects,
+  archiveProject,
+  unarchiveProject,
   deleteSupplierQuote,
   updateSupplier,
   deleteSupplier,
@@ -157,10 +160,17 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number(),
-          status: z.enum(["pending", "sent", "in_progress", "won", "lost"]),
+          status: z.enum(["pending", "sent", "in_progress", "won", "lost", "archived"]),
         })
       )
       .mutation(({ input }) => updateProjectStatus(input.id, input.status)),
+    archived: protectedProcedure.query(({ ctx }) => getArchivedProjects(ctx.user.id)),
+    archive: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => archiveProject(input.id)),
+    unarchive: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => unarchiveProject(input.id)),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => deleteProject(input.id)),

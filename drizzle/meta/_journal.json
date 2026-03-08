@@ -43,6 +43,13 @@
       "when": 1772877888589,
       "tag": "0005_unique_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772936395033,
+      "tag": "0006_smiling_the_hunter",
+      "breakpoints": true
     }
   ]
 }

@@ -89,7 +89,7 @@ export const projects = mysqlTable("projects", {
   customerContact: varchar("customerContact", { length: 255 }),
   customerEmail: varchar("customerEmail", { length: 255 }),
   customerAddress: text("customerAddress"),
-  status: mysqlEnum("status", ["pending", "sent", "in_progress", "won", "lost"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "sent", "in_progress", "won", "lost", "archived"]).default("pending").notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

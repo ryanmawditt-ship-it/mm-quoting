@@ -32,6 +32,8 @@ import {
   Send,
   Loader2 as InProgressIcon,
   Trash2,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
@@ -66,9 +68,15 @@ const statusConfig: Record<
     color: "bg-red-100 text-red-700 border-red-200",
     icon: XCircle,
   },
+  archived: {
+    label: "Archived",
+    color: "bg-gray-100 text-gray-500 border-gray-200",
+    icon: Archive,
+  },
 };
 
 type ProjectStatus = "pending" | "sent" | "in_progress" | "won" | "lost";
+type Tab = "active" | "archived";
 
 export default function ProjectsPage() {
   const [, setLocation] = useLocation();
@@ -80,8 +88,10 @@ export default function ProjectsPage() {
     id: number;
     name: string;
   } | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("active");
 
   const { data: projects, isLoading } = trpc.projects.list.useQuery();
+  const { data: archivedProjects, isLoading: archiveLoading } = trpc.projects.archived.useQuery();
   const utils = trpc.useUtils();
 
   const createProject = trpc.projects.create.useMutation({
@@ -113,9 +123,32 @@ export default function ProjectsPage() {
     },
   });
 
+  const archiveProjectMutation = trpc.projects.archive.useMutation({
+    onSuccess: () => {
+      utils.projects.list.invalidate();
+      utils.projects.archived.invalidate();
+      toast.success("Project archived");
+    },
+    onError: () => {
+      toast.error("Failed to archive project");
+    },
+  });
+
+  const unarchiveProjectMutation = trpc.projects.unarchive.useMutation({
+    onSuccess: () => {
+      utils.projects.list.invalidate();
+      utils.projects.archived.invalidate();
+      toast.success("Project restored from archive");
+    },
+    onError: () => {
+      toast.error("Failed to restore project");
+    },
+  });
+
   const deleteProject = trpc.projects.delete.useMutation({
     onSuccess: () => {
       utils.projects.list.invalidate();
+      utils.projects.archived.invalidate();
       setDeleteDialogOpen(false);
       setProjectToDelete(null);
       toast.success("Project deleted successfully");
@@ -135,16 +168,17 @@ export default function ProjectsPage() {
   });
 
   const filteredProjects = useMemo(() => {
-    if (!projects) return [];
-    return projects.filter((p) => {
+    const source = activeTab === "active" ? projects : archivedProjects;
+    if (!source) return [];
+    return source.filter((p) => {
       const matchesSearch =
         !searchQuery ||
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.customerName.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || p.status === statusFilter;
+      const matchesStatus = activeTab === "archived" || statusFilter === "all" || p.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [projects, searchQuery, statusFilter]);
+  }, [projects, archivedProjects, searchQuery, statusFilter, activeTab]);
 
   const stats = useMemo(() => {
     if (!projects) return { total: 0, active: 0, won: 0, winRate: 0 };
@@ -178,6 +212,22 @@ export default function ProjectsPage() {
     updateStatus.mutate({ id: projectId, status: newStatus });
   };
 
+  const handleArchiveClick = (
+    e: React.MouseEvent,
+    projectId: number
+  ) => {
+    e.stopPropagation();
+    archiveProjectMutation.mutate({ id: projectId });
+  };
+
+  const handleUnarchiveClick = (
+    e: React.MouseEvent,
+    projectId: number
+  ) => {
+    e.stopPropagation();
+    unarchiveProjectMutation.mutate({ id: projectId });
+  };
+
   const handleDeleteClick = (
     e: React.MouseEvent,
     project: { id: number; name: string }
@@ -192,6 +242,8 @@ export default function ProjectsPage() {
       deleteProject.mutate({ id: projectToDelete.id });
     }
   };
+
+  const isCurrentLoading = activeTab === "active" ? isLoading : archiveLoading;
 
   return (
     <div className="space-y-6">
@@ -302,60 +354,92 @@ export default function ProjectsPage() {
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <FolderKanban className="h-4 w-4 text-primary" />
+      {/* Stats Cards — only shown on active tab */}
+      {activeTab === "active" && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <FolderKanban className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Projects</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Projects</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.active}</p>
+                  <p className="text-xs text-muted-foreground">Active</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                <Clock className="h-4 w-4 text-blue-600" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.won}</p>
+                  <p className="text-xs text-muted-foreground">Won</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.active}</p>
-                <p className="text-xs text-muted-foreground">Active</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.winRate}%</p>
+                  <p className="text-xs text-muted-foreground">Win Rate</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.won}</p>
-                <p className="text-xs text-muted-foreground">Won</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.winRate}%</p>
-                <p className="text-xs text-muted-foreground">Win Rate</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b">
+        <button
+          onClick={() => { setActiveTab("active"); setStatusFilter("all"); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "active"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+          }`}
+        >
+          <FolderKanban className="h-4 w-4 inline-block mr-2 -mt-0.5" />
+          Projects
+          {projects && <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full">{projects.length}</span>}
+        </button>
+        <button
+          onClick={() => { setActiveTab("archived"); setStatusFilter("all"); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "archived"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+          }`}
+        >
+          <Archive className="h-4 w-4 inline-block mr-2 -mt-0.5" />
+          Archived
+          {archivedProjects && archivedProjects.length > 0 && (
+            <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full">{archivedProjects.length}</span>
+          )}
+        </button>
       </div>
 
       {/* Search & Filter */}
@@ -363,29 +447,31 @@ export default function ProjectsPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search projects..."
+            placeholder={activeTab === "active" ? "Search projects..." : "Search archived projects..."}
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="sent">Sent</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="won">Won</SelectItem>
-            <SelectItem value="lost">Lost</SelectItem>
-          </SelectContent>
-        </Select>
+        {activeTab === "active" && (
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="won">Won</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Project List */}
-      {isLoading ? (
+      {isCurrentLoading ? (
         <div className="grid gap-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
@@ -399,27 +485,39 @@ export default function ProjectsPage() {
       ) : filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <FolderKanban className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <h3 className="font-semibold text-lg mb-1">No projects found</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-              Create your first project to start managing supplier quotes and
-              generating customer tenders.
-            </p>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create First Project
-            </Button>
+            {activeTab === "active" ? (
+              <>
+                <FolderKanban className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="font-semibold text-lg mb-1">No projects found</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+                  Create your first project to start managing supplier quotes and
+                  generating customer tenders.
+                </p>
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Project
+                </Button>
+              </>
+            ) : (
+              <>
+                <Archive className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="font-semibold text-lg mb-1">No archived projects</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Archived projects will appear here. You can archive projects from the Projects tab to keep your workspace clean.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3">
           {filteredProjects.map((project) => {
-            const status = statusConfig[project.status];
+            const status = statusConfig[project.status] || statusConfig.pending;
             const StatusIcon = status?.icon || Clock;
             return (
               <Card
                 key={project.id}
-                className="hover:shadow-md transition-shadow cursor-pointer group"
+                className={`hover:shadow-md transition-shadow cursor-pointer group ${activeTab === "archived" ? "opacity-75 hover:opacity-100" : ""}`}
                 onClick={() =>
                   setLocation(`/dashboard/projects/${project.id}`)
                 }
@@ -451,46 +549,87 @@ export default function ProjectsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {/* Status Dropdown */}
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={project.status}
-                          onValueChange={(val) =>
-                            handleStatusChange(
-                              { stopPropagation: () => {} } as React.MouseEvent,
-                              project.id,
-                              val as ProjectStatus
-                            )
-                          }
-                        >
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                            <SelectItem value="in_progress">
-                              In Progress
-                            </SelectItem>
-                            <SelectItem value="won">Won</SelectItem>
-                            <SelectItem value="lost">Lost</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {/* Delete Button */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) =>
-                          handleDeleteClick(e, {
-                            id: project.id,
-                            name: project.name,
-                          })
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {activeTab === "active" ? (
+                        <>
+                          {/* Status Dropdown */}
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={project.status}
+                              onValueChange={(val) =>
+                                handleStatusChange(
+                                  { stopPropagation: () => {} } as React.MouseEvent,
+                                  project.id,
+                                  val as ProjectStatus
+                                )
+                              }
+                            >
+                              <SelectTrigger className="w-[130px] h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="sent">Sent</SelectItem>
+                                <SelectItem value="in_progress">
+                                  In Progress
+                                </SelectItem>
+                                <SelectItem value="won">Won</SelectItem>
+                                <SelectItem value="lost">Lost</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {/* Archive Button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-amber-600 hover:bg-amber-50"
+                            onClick={(e) => handleArchiveClick(e, project.id)}
+                            title="Archive project"
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) =>
+                              handleDeleteClick(e, {
+                                id: project.id,
+                                name: project.name,
+                              })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Restore Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={(e) => handleUnarchiveClick(e, project.id)}
+                          >
+                            <ArchiveRestore className="h-3.5 w-3.5 mr-1.5" />
+                            Restore
+                          </Button>
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) =>
+                              handleDeleteClick(e, {
+                                id: project.id,
+                                name: project.name,
+                              })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                       {/* Date */}
                       <p className="text-xs text-muted-foreground ml-1">
                         {new Date(project.createdAt).toLocaleDateString(

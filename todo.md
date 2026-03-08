@@ -218,3 +218,9 @@
 - [x] Fix auto-sort: bundled items should stay with their type group in correct position, not pushed to end
 - [x] Highlight quantity mismatches between customer schedule and supplier quotes in Step 2 review table
 - [x] Fix PDF generation: bundled items should appear in the user's chosen order, not pushed to end of quote
+- [x] Add 'archived' status to project schema
+- [x] Add archive/unarchive DB helpers and tRPC procedures
+- [x] Add Archived Projects tab to frontend UI with restore capability
+- [x] Filter archived projects out of main Projects tab
+- [x] Archive all existing projects so user starts fresh
+- [x] Update dashboard stats to exclude archived projects

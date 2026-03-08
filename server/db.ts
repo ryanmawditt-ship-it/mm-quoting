@@ -1,4 +1,4 @@
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, companySettings, InsertCompanySettings, salespersons, suppliers, projects, supplierQuotes, lineItems, customerQuotes, customerQuoteLineItems, projectSuppliers } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -245,10 +245,35 @@ export async function getOrCreateSupplierByName(userId: number, name: string, co
 /**
  * Projects
  */
-export async function getProjects(userId: number) {
+export async function getProjects(userId: number, includeArchived: boolean = false) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(projects).where(eq(projects.userId, userId));
+  if (includeArchived) {
+    return db.select().from(projects).where(eq(projects.userId, userId));
+  }
+  return db.select().from(projects).where(
+    and(eq(projects.userId, userId), ne(projects.status, "archived"))
+  );
+}
+
+export async function getArchivedProjects(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projects).where(
+    and(eq(projects.userId, userId), eq(projects.status, "archived"))
+  );
+}
+
+export async function archiveProject(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(projects).set({ status: "archived", updatedAt: new Date() }).where(eq(projects.id, id));
+}
+
+export async function unarchiveProject(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(projects).set({ status: "pending", updatedAt: new Date() }).where(eq(projects.id, id));
 }
 
 export async function createProject(userId: number, name: string, customerName: string, customerContact?: string, customerEmail?: string, customerAddress?: string, description?: string) {
@@ -264,7 +289,7 @@ export async function getProjectById(id: number) {
   return result.length > 0 ? result[0] : null;
 }
 
-export async function updateProjectStatus(id: number, status: 'pending' | 'sent' | 'in_progress' | 'won' | 'lost') {
+export async function updateProjectStatus(id: number, status: 'pending' | 'sent' | 'in_progress' | 'won' | 'lost' | 'archived') {
   const db = await getDb();
   if (!db) return;
   await db.update(projects).set({ status, updatedAt: new Date() }).where(eq(projects.id, id));

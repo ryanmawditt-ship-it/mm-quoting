@@ -212,3 +212,6 @@
 - [x] Customer schedule import: add Excel (.xlsx/.xls) and CSV file support
 - [x] Customer schedule import: server-side spreadsheet parsing to extract type codes from rows/columns
 - [x] Customer schedule import: update frontend file picker to accept spreadsheet formats
+- [x] Make quote builder dialog wider (near full-screen) to reduce horizontal scrolling
+- [x] Global margin field should instantly apply to ALL lines without needing select-all first
+- [x] Allow selecting specific lines to change their margin independently after global is set

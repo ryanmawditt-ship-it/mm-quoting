@@ -849,7 +849,7 @@ export default function ProjectDetailPage() {
 
       {/* Quote Builder Dialog */}
       <Dialog open={quoteBuilderOpen} onOpenChange={setQuoteBuilderOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[95vw] lg:max-w-[90vw] max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Build Customer Quote</DialogTitle>
           </DialogHeader>
@@ -2030,26 +2030,25 @@ function QuoteBuilder({
     }, 300);
   };
 
-  // Apply global margin to all items (selected or not) and save to DB
-  const applyGlobalMargin = () => {
-    // Update all selected items
+  // Apply global margin to ALL selected items immediately and save to DB
+  const applyGlobalMargin = (newMargin: number) => {
+    // Update all selected items to the new margin
     const newSelected = new Map(selectedItems);
     newSelected.forEach((val, key) => {
-      newSelected.set(key, { ...val, margin: globalMargin });
+      newSelected.set(key, { ...val, margin: newMargin });
     });
     setSelectedItems(newSelected);
 
-    // Save all line items' margins to DB
+    // Save all line items' margins to DB (including unselected so they pick up the default)
     const allItemIds = allLineItems.map(({ item }) => ({
       id: item.id,
-      marginPercent: globalMargin,
+      marginPercent: newMargin,
     }));
     if (allItemIds.length > 0) {
       updateMarginsMutation.mutate(
         { items: allItemIds },
         {
           onSuccess: () => {
-            toast.success(`Applied ${globalMargin}% margin to all ${allItemIds.length} items`);
             supplierQuotes.forEach((sq) => {
               utils.lineItems.getBySupplierQuote.invalidate({ supplierQuoteId: sq.id });
             });
@@ -2057,6 +2056,27 @@ function QuoteBuilder({
         }
       );
     }
+  };
+
+  // Debounce ref for global margin changes
+  const globalMarginTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Handle global margin change — immediately update UI, debounce DB save
+  const handleGlobalMarginChange = (newMargin: number) => {
+    setGlobalMargin(newMargin);
+
+    // Immediately update all selected items in the UI
+    const newSelected = new Map(selectedItems);
+    newSelected.forEach((val, key) => {
+      newSelected.set(key, { ...val, margin: newMargin });
+    });
+    setSelectedItems(newSelected);
+
+    // Debounce the DB save
+    if (globalMarginTimerRef.current) clearTimeout(globalMarginTimerRef.current);
+    globalMarginTimerRef.current = setTimeout(() => {
+      applyGlobalMargin(newMargin);
+    }, 600);
   };
 
   // ============================================================
@@ -2471,7 +2491,7 @@ function QuoteBuilder({
 
           <Separator />
 
-          {/* Global Margin Control */}
+          {/* Global Margin Control — changes apply to ALL lines instantly */}
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
             <Percent className="h-4 w-4 text-muted-foreground" />
             <Label className="shrink-0">Global Margin:</Label>
@@ -2479,15 +2499,13 @@ function QuoteBuilder({
               type="number"
               className="w-24"
               value={globalMargin}
-              onChange={(e) => setGlobalMargin(parseInt(e.target.value) || 0)}
+              onChange={(e) => handleGlobalMarginChange(parseInt(e.target.value) || 0)}
               min={0}
               max={99}
             />
             <span className="text-sm text-muted-foreground">%</span>
-            <span className="text-xs text-muted-foreground">(Sell = Cost &divide; {(1 - globalMargin / 100).toFixed(2)})</span>
-            <Button variant="outline" size="sm" onClick={applyGlobalMargin}>
-              Apply to All Items
-            </Button>
+            <span className="text-xs text-muted-foreground">(Sell = Cost ÷ {(1 - globalMargin / 100).toFixed(2)})</span>
+            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Changes apply to all lines instantly</span>
           </div>
 
           {/* Line Items Selection */}

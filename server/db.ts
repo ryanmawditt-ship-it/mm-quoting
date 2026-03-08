@@ -125,10 +125,35 @@ export async function createSalesperson(userId: number, name: string, email?: st
 /**
  * Suppliers
  */
-export async function getSuppliers(userId: number) {
+export async function getSuppliers(userId: number, includeArchived: boolean = false) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(suppliers).where(eq(suppliers.userId, userId));
+  if (includeArchived) {
+    return db.select().from(suppliers).where(eq(suppliers.userId, userId));
+  }
+  return db.select().from(suppliers).where(
+    and(eq(suppliers.userId, userId), eq(suppliers.isArchived, 0))
+  );
+}
+
+export async function getArchivedSuppliers(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(suppliers).where(
+    and(eq(suppliers.userId, userId), eq(suppliers.isArchived, 1))
+  );
+}
+
+export async function archiveSupplier(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(suppliers).set({ isArchived: 1, updatedAt: new Date() }).where(eq(suppliers.id, id));
+}
+
+export async function unarchiveSupplier(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(suppliers).set({ isArchived: 0, updatedAt: new Date() }).where(eq(suppliers.id, id));
 }
 
 export async function createSupplier(userId: number, name: string, contact?: string, email?: string, phone?: string, defaultMarkupPercent: number = 0) {

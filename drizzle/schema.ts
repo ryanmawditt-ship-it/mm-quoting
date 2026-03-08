@@ -71,6 +71,7 @@ export const suppliers = mysqlTable("suppliers", {
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 20 }),
   defaultMarkupPercent: int("defaultMarkupPercent").default(0).notNull(), // Default markup % for this supplier
+  isArchived: int("isArchived").default(0).notNull(), // 0 = active, 1 = archived
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

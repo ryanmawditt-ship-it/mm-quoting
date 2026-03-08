@@ -33,6 +33,9 @@ import {
   deleteSupplierQuote,
   updateSupplier,
   deleteSupplier,
+  getArchivedSuppliers,
+  archiveSupplier,
+  unarchiveSupplier,
   getProjectSuppliers,
   addProjectSupplier,
   removeProjectSupplier,
@@ -126,6 +129,13 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => deleteSupplier(input.id)),
+    archived: protectedProcedure.query(({ ctx }) => getArchivedSuppliers(ctx.user.id)),
+    archive: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => archiveSupplier(input.id)),
+    unarchive: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => unarchiveSupplier(input.id)),
   }),
 
   // Projects

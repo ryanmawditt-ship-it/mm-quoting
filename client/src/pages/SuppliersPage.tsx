@@ -21,9 +21,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Truck, Plus, Search, Percent, Mail, Phone, User, Pencil, Trash2 } from "lucide-react";
+import { Truck, Plus, Search, Percent, Mail, Phone, User, Pencil, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
+
+type Tab = "active" | "archived";
 
 export default function SuppliersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,8 +33,10 @@ export default function SuppliersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<{ id: number; name: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("active");
 
   const { data: suppliers, isLoading } = trpc.suppliers.list.useQuery();
+  const { data: archivedSuppliers, isLoading: archiveLoading } = trpc.suppliers.archived.useQuery();
   const utils = trpc.useUtils();
 
   // Create form state
@@ -77,9 +81,32 @@ export default function SuppliersPage() {
     },
   });
 
+  const archiveSupplierMutation = trpc.suppliers.archive.useMutation({
+    onSuccess: () => {
+      utils.suppliers.list.invalidate();
+      utils.suppliers.archived.invalidate();
+      toast.success("Supplier archived");
+    },
+    onError: () => {
+      toast.error("Failed to archive supplier");
+    },
+  });
+
+  const unarchiveSupplierMutation = trpc.suppliers.unarchive.useMutation({
+    onSuccess: () => {
+      utils.suppliers.list.invalidate();
+      utils.suppliers.archived.invalidate();
+      toast.success("Supplier restored from archive");
+    },
+    onError: () => {
+      toast.error("Failed to restore supplier");
+    },
+  });
+
   const deleteSupplier = trpc.suppliers.delete.useMutation({
     onSuccess: () => {
       utils.suppliers.list.invalidate();
+      utils.suppliers.archived.invalidate();
       setDeleteDialogOpen(false);
       setSupplierToDelete(null);
       toast.success("Supplier deleted");
@@ -90,14 +117,15 @@ export default function SuppliersPage() {
   });
 
   const filteredSuppliers = useMemo(() => {
-    if (!suppliers) return [];
-    if (!searchQuery) return suppliers;
-    return suppliers.filter(
+    const source = activeTab === "active" ? suppliers : archivedSuppliers;
+    if (!source) return [];
+    if (!searchQuery) return source;
+    return source.filter(
       (s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (s.contact && s.contact.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [suppliers, searchQuery]);
+  }, [suppliers, archivedSuppliers, searchQuery, activeTab]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,6 +175,8 @@ export default function SuppliersPage() {
     setSupplierToDelete(supplier);
     setDeleteDialogOpen(true);
   };
+
+  const isCurrentLoading = activeTab === "active" ? isLoading : archiveLoading;
 
   return (
     <div className="space-y-6">
@@ -243,11 +273,41 @@ export default function SuppliersPage() {
         </Dialog>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b">
+        <button
+          onClick={() => setActiveTab("active")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "active"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+          }`}
+        >
+          <Truck className="h-4 w-4 inline-block mr-2 -mt-0.5" />
+          Active
+          {suppliers && <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full">{suppliers.length}</span>}
+        </button>
+        <button
+          onClick={() => setActiveTab("archived")}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "archived"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+          }`}
+        >
+          <Archive className="h-4 w-4 inline-block mr-2 -mt-0.5" />
+          Archived
+          {archivedSuppliers && archivedSuppliers.length > 0 && (
+            <span className="ml-1.5 text-xs bg-muted px-1.5 py-0.5 rounded-full">{archivedSuppliers.length}</span>
+          )}
+        </button>
+      </div>
+
       {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search suppliers..."
+          placeholder={activeTab === "active" ? "Search suppliers..." : "Search archived suppliers..."}
           className="pl-9"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -255,7 +315,7 @@ export default function SuppliersPage() {
       </div>
 
       {/* Supplier List */}
-      {isLoading ? (
+      {isCurrentLoading ? (
         <div className="grid gap-3 md:grid-cols-2">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="animate-pulse">
@@ -269,21 +329,36 @@ export default function SuppliersPage() {
       ) : filteredSuppliers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Truck className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <h3 className="font-semibold text-lg mb-1">No suppliers yet</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-              Add your suppliers to set default margin percentages and manage their quotes.
-            </p>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add First Supplier
-            </Button>
+            {activeTab === "active" ? (
+              <>
+                <Truck className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="font-semibold text-lg mb-1">No suppliers yet</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+                  Add your suppliers to set default margin percentages and manage their quotes.
+                </p>
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add First Supplier
+                </Button>
+              </>
+            ) : (
+              <>
+                <Archive className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="font-semibold text-lg mb-1">No archived suppliers</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Archived suppliers will appear here. You can archive suppliers from the Active tab to clean up duplicates.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {filteredSuppliers.map((supplier) => (
-            <Card key={supplier.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={supplier.id}
+              className={`hover:shadow-md transition-shadow ${activeTab === "archived" ? "opacity-75 hover:opacity-100" : ""}`}
+            >
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -313,24 +388,58 @@ export default function SuppliersPage() {
                     <Badge variant="secondary" className="text-sm font-semibold">
                       {supplier.defaultMarkupPercent}% margin
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onClick={() => openEditDialog(supplier)}
-                      title="Edit supplier"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => openDeleteDialog(supplier)}
-                      title="Delete supplier"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {activeTab === "active" ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => openEditDialog(supplier)}
+                          title="Edit supplier"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-amber-600 hover:bg-amber-50"
+                          onClick={() => archiveSupplierMutation.mutate({ id: supplier.id })}
+                          title="Archive supplier"
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => openDeleteDialog(supplier)}
+                          title="Delete supplier"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => unarchiveSupplierMutation.mutate({ id: supplier.id })}
+                        >
+                          <ArchiveRestore className="h-3.5 w-3.5 mr-1.5" />
+                          Restore
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => openDeleteDialog(supplier)}
+                          title="Delete supplier"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>

@@ -224,3 +224,7 @@
 - [x] Filter archived projects out of main Projects tab
 - [x] Archive all existing projects so user starts fresh
 - [x] Update dashboard stats to exclude archived projects
+- [x] Add 'isArchived' flag to supplier schema
+- [x] Add archive/unarchive DB helpers and tRPC procedures for suppliers
+- [x] Add tabbed Active/Archived UI to SuppliersPage with archive/restore actions
+- [x] Filter archived suppliers from active supplier lists (dropdowns, project assignment, etc.)

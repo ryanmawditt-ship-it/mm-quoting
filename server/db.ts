@@ -552,4 +552,16 @@ export async function updateProjectSupplierNotes(projectId: number, supplierId: 
   );
 }
 
+/**
+ * Delete a customer quote and its line items
+ */
+export async function deleteCustomerQuote(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Delete line items first (foreign key)
+  await db.delete(customerQuoteLineItems).where(eq(customerQuoteLineItems.customerQuoteId, id));
+  // Delete the quote itself
+  await db.delete(customerQuotes).where(eq(customerQuotes.id, id));
+}
+
 // TODO: add additional feature queries as needed

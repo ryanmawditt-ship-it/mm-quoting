@@ -103,6 +103,17 @@ export default function ProjectDetailPage() {
     },
   });
 
+  // Customer quote delete
+  const [deleteCustomerQuoteId, setDeleteCustomerQuoteId] = useState<number | null>(null);
+  const deleteCustomerQuoteMutation = trpc.customerQuotes.delete.useMutation({
+    onSuccess: () => {
+      utils.customerQuotes.getByProject.invalidate({ projectId });
+      setDeleteCustomerQuoteId(null);
+      toast.success("Customer quote deleted");
+    },
+    onError: () => toast.error("Failed to delete customer quote"),
+  });
+
   // Project supplier tracking
   const [addSupplierOpen, setAddSupplierOpen] = useState(false);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
@@ -837,6 +848,17 @@ export default function ProjectDetailPage() {
                             PDF
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteCustomerQuoteId(cq.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -846,6 +868,31 @@ export default function ProjectDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete Customer Quote Confirmation */}
+      <AlertDialog open={deleteCustomerQuoteId !== null} onOpenChange={(open) => { if (!open) setDeleteCustomerQuoteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Customer Quote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this customer quote? This will permanently remove the quote and all its line items. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteCustomerQuoteId) {
+                  deleteCustomerQuoteMutation.mutate({ id: deleteCustomerQuoteId });
+                }
+              }}
+            >
+              {deleteCustomerQuoteMutation.isPending ? "Deleting..." : "Delete Quote"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Quote Builder Dialog */}
       <Dialog open={quoteBuilderOpen} onOpenChange={setQuoteBuilderOpen}>

@@ -239,3 +239,4 @@
 - [x] Fix: Settings keep reverting to old values after saving (recurring issue)
 - [x] Set up site password protection (password: 880) for staff access
 - [x] Fix: Password protection not prompting when loading site in new tab (wired PasswordGate into App.tsx)
+- [x] Add delete option for customer quotes within each project to remove duplicates

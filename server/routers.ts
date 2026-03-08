@@ -32,6 +32,7 @@ import {
   unarchiveProject,
   deleteSupplierQuote,
   updateSupplier,
+  deleteCustomerQuote,
   deleteSupplier,
   getArchivedSuppliers,
   archiveSupplier,
@@ -303,6 +304,9 @@ export const appRouter = router({
         })
       )
       .mutation(({ input }) => updateCustomerQuoteStatus(input.id, input.status)),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => deleteCustomerQuote(input.id)),
   }),
 
   // Project Suppliers (tracking which suppliers are expected to quote)

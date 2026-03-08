@@ -235,3 +235,5 @@
 - [x] Update PDF generation to use custom color scheme
 - [x] Fix: Settings page save reverts to old values instead of persisting changes
 - [x] Fix: PDF pages not utilizing full page length, too much wasted space at bottom of each page
+- [x] Fix: Company settings (address, phone, ABN) revert to defaults after saving
+- [x] Fix: Settings keep reverting to old values after saving (recurring issue)

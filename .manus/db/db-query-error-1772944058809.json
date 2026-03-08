@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, user_id, company_name, abn, address, phone, fax, email, pdf_primary_color, pdf_accent_color, updated_at FROM company_settings ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, user_id, company_name, abn, address, phone, fax, email, pdf_primary_color, pdf_accent_color, updated_at FROM company_settings ORDER BY id;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'user_id' in 'field list'"
+  ]
+}

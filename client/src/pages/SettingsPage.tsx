@@ -16,11 +16,26 @@ export default function SettingsPage() {
   const utils = trpc.useUtils();
 
   const updateSettings = trpc.company.updateSettings.useMutation({
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches so they don't overwrite our optimistic update
+      await utils.company.getSettings.cancel();
+      // Snapshot previous value
+      const prev = utils.company.getSettings.getData();
+      // Optimistically set the cache to the new values
+      if (prev) {
+        utils.company.getSettings.setData(undefined, { ...prev, ...newData });
+      }
+      return { prev };
+    },
     onSuccess: () => {
       utils.company.getSettings.invalidate();
       toast.success("Company settings saved");
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      // Rollback to previous value on error
+      if (context?.prev) {
+        utils.company.getSettings.setData(undefined, context.prev);
+      }
       toast.error("Failed to save settings");
     },
   });

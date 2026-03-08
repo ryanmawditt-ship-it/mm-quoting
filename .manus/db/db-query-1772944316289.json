@@ -1,0 +1,18 @@
+{
+  "query": "SELECT companyName, address, phone, fax, email, updatedAt FROM company_settings WHERE id = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT companyName, address, phone, fax, email, updatedAt FROM company_settings WHERE id = 1;",
+  "rows": [
+    {
+      "companyName": "MM Albion",
+      "address": "7 Bimbil Street, Albion QLD 4010",
+      "phone": "0439 699 885",
+      "fax": "07 3260 0700",
+      "email": "ryan.mawditt@mmem.com.au",
+      "updatedAt": "2026-03-08 04:31:49"
+    }
+  ],
+  "messages": [],
+  "stdout": "companyName\taddress\tphone\tfax\temail\tupdatedAt\nMM Albion\t7 Bimbil Street, Albion QLD 4010\t0439 699 885\t07 3260 0700\tryan.mawditt@mmem.com.au\t2026-03-08 04:31:49\n",
+  "stderr": "",
+  "execution_time_ms": 1606
+}

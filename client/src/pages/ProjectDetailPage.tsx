@@ -1311,7 +1311,7 @@ function SortableRow({ id, lineNum, itemType, description, quantity, sellTotal }
   );
 }
 
-function ReviewRow({ lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onRemove, onMoveToTop, onMoveUp, onMoveDown, onMoveToBottom, onSequenceChange, totalItems }: {
+function ReviewRow({ lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onRemove, onMoveToTop, onMoveUp, onMoveDown, onMoveToBottom, onSequenceChange, totalItems, customerScheduleQty }: {
   lineNum: number;
   itemType: string;
   description: string;
@@ -1330,9 +1330,11 @@ function ReviewRow({ lineNum, itemType, description, productCode, quantity, cost
   onMoveToBottom: () => void;
   onSequenceChange: (newPos: number) => void;
   totalItems: number;
+  customerScheduleQty?: number | null;
 }) {
+  const hasQtyMismatch = customerScheduleQty != null && customerScheduleQty > 0 && quantity !== customerScheduleQty;
   return (
-    <tr className="border-b last:border-0 hover:bg-muted/30">
+    <tr className={`border-b last:border-0 hover:bg-muted/30 ${hasQtyMismatch ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
       <td className="p-2">
         <div className="flex items-center gap-0.5">
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onMoveToTop} disabled={lineNum === 1} title="Move to top">
@@ -1368,13 +1370,24 @@ function ReviewRow({ lineNum, itemType, description, productCode, quantity, cost
         {productCode && <div className="text-[10px] text-muted-foreground font-mono">{productCode}</div>}
       </td>
       <td className="p-2 text-right">
-        <Input
-          type="number"
-          className="w-20 h-7 text-right text-xs"
-          value={quantity}
-          onChange={(e) => onQuantityChange(parseInt(e.target.value) || 0)}
-          min={0}
-        />
+        <div className="flex flex-col items-end gap-0.5">
+          <Input
+            type="number"
+            className={`w-20 h-7 text-right text-xs ${hasQtyMismatch ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-400" : ""}`}
+            value={quantity}
+            onChange={(e) => onQuantityChange(parseInt(e.target.value) || 0)}
+            min={0}
+          />
+          {hasQtyMismatch && (
+            <button
+              onClick={() => onQuantityChange(customerScheduleQty!)}
+              className="text-[10px] text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 hover:underline cursor-pointer whitespace-nowrap"
+              title={`Customer requested ${customerScheduleQty}. Click to update.`}
+            >
+              Customer: {customerScheduleQty} →
+            </button>
+          )}
+        </div>
       </td>
       <td className="p-2 text-right font-mono text-xs text-muted-foreground">
         ${costPrice.toFixed(2)}
@@ -2129,6 +2142,7 @@ function QuoteBuilder({
   };
 
   // Auto-sort selected items to match the imported customer schedule order
+  // Bundled items (no type or empty type) stay grouped with the preceding typed item
   const autoSortBySchedule = () => {
     if (!importedSchedule || importedSchedule.length === 0) return;
 
@@ -2141,47 +2155,81 @@ function QuoteBuilder({
       }
     });
 
-    // Get current selected item IDs
+    // Get current selected item IDs in their existing order
     const currentSelected = orderedItemIds.filter(id => selectedItems.has(id));
     selectedItems.forEach((_, id) => {
       if (!currentSelected.includes(id)) currentSelected.push(id);
     });
 
-    // Build sortable entries with their type codes
+    // Build entries with type info and bundled flag
     const entries = currentSelected.map(id => {
       const data = selectedItems.get(id);
       const lineItem = allLineItems.find(({ item }) => item.id === id);
       const rawType = data?.itemType || lineItem?.item?.type || "";
       const normType = normaliseTypeCode(rawType);
-      return { id, normType, rawType };
+      const isBundled = lineItem?.item?.isBundled || false;
+      const costPrice = data?.costPrice || 0;
+      // An item is considered an "accessory" (should follow its parent type) if:
+      // - it has no type code, OR
+      // - it is flagged as bundled, OR
+      // - it has $0 cost and shares the same type as a preceding item
+      return { id, normType, rawType, isBundled, costPrice };
     });
 
-    // Sort: items matching schedule types come first (in schedule order),
-    // then unmatched items keep their relative order at the end
-    entries.sort((a, b) => {
-      const aPriority = schedulePriority.get(a.normType);
-      const bPriority = schedulePriority.get(b.normType);
+    // Group items by type: each type code gets a "group" of items (main + accessories/bundled)
+    // Items with no type code are attached to the preceding type group
+    const typeGroups: { typeCode: string; normType: string; items: typeof entries }[] = [];
+    let currentGroup: typeof typeGroups[0] | null = null;
 
-      // Try partial matching if exact match fails
-      const aMatch = aPriority !== undefined ? aPriority : findFuzzyMatch(a.normType, schedulePriority);
-      const bMatch = bPriority !== undefined ? bPriority : findFuzzyMatch(b.normType, schedulePriority);
+    for (const entry of entries) {
+      const hasType = entry.normType.length > 0;
+
+      if (hasType) {
+        // Check if this type already has a group (items of same type should be together)
+        const existingGroup = typeGroups.find(g => g.normType === entry.normType);
+        if (existingGroup) {
+          existingGroup.items.push(entry);
+          currentGroup = existingGroup;
+        } else {
+          currentGroup = { typeCode: entry.rawType, normType: entry.normType, items: [entry] };
+          typeGroups.push(currentGroup);
+        }
+      } else {
+        // No type code — attach to current group as accessory/bundled item
+        if (currentGroup) {
+          currentGroup.items.push(entry);
+        } else {
+          // No preceding group yet, create an "untyped" group
+          currentGroup = { typeCode: "", normType: "", items: [entry] };
+          typeGroups.push(currentGroup);
+        }
+      }
+    }
+
+    // Sort the groups by customer schedule order
+    typeGroups.sort((a, b) => {
+      const aExact = schedulePriority.get(a.normType);
+      const bExact = schedulePriority.get(b.normType);
+      const aMatch = aExact !== undefined ? aExact : findFuzzyMatch(a.normType, schedulePriority);
+      const bMatch = bExact !== undefined ? bExact : findFuzzyMatch(b.normType, schedulePriority);
 
       if (aMatch !== undefined && bMatch !== undefined) return aMatch - bMatch;
-      if (aMatch !== undefined) return -1; // matched items first
+      if (aMatch !== undefined) return -1;
       if (bMatch !== undefined) return 1;
       return 0; // both unmatched — keep relative order
     });
 
-    const newOrder = entries.map(e => e.id);
+    // Flatten groups back into ordered IDs
+    const newOrder = typeGroups.flatMap(g => g.items.map(e => e.id));
     const unselected = orderedItemIds.filter(id => !selectedItems.has(id));
     setOrderedItemIds([...newOrder, ...unselected]);
 
-    // Count matches
-    const matchedCount = entries.filter(e => {
-      const exact = schedulePriority.get(e.normType);
-      const fuzzy = exact !== undefined ? exact : findFuzzyMatch(e.normType, schedulePriority);
-      return fuzzy !== undefined;
-    }).length;
+    // Count matched groups
+    const matchedCount = typeGroups.filter(g => {
+      if (!g.normType) return false;
+      const exact = schedulePriority.get(g.normType);
+      return exact !== undefined || findFuzzyMatch(g.normType, schedulePriority) !== undefined;
+    }).reduce((sum, g) => sum + g.items.length, 0);
 
     toast.success(`Sorted ${matchedCount} of ${entries.length} items to match customer schedule order`);
   };
@@ -2641,6 +2689,7 @@ function QuoteBuilder({
                     >
                       <span className="font-mono font-bold mr-1">{idx + 1}.</span>
                       {t.code}
+                      {t.quantity != null && t.quantity > 0 && <span className="ml-1 font-mono text-blue-600 dark:text-blue-300">x{t.quantity}</span>}
                       {t.description && <span className="ml-1 text-blue-500 dark:text-blue-400">({t.description})</span>}
                     </Badge>
                   ))}
@@ -2682,6 +2731,18 @@ function QuoteBuilder({
                       const unselected = orderedItemIds.filter((id: number) => !selectedItems.has(id));
                       setOrderedItemIds([...newOrder, ...unselected]);
                     };
+                    // Look up customer schedule quantity for this item's type
+                    let custQty: number | null = null;
+                    if (importedSchedule && data.itemType) {
+                      const normItemType = data.itemType.toUpperCase().replace(/^TYPE\s+/i, "").replace(/^LUMINAIRE\s+/i, "").replace(/^FIXTURE\s+/i, "").replace(/^FTG\s+/i, "").replace(/\s+/g, " ").trim();
+                      const match = importedSchedule.find(s => {
+                        const normSched = s.code.toUpperCase().replace(/^TYPE\s+/i, "").replace(/^LUMINAIRE\s+/i, "").replace(/^FIXTURE\s+/i, "").replace(/^FTG\s+/i, "").replace(/\s+/g, " ").trim();
+                        return normSched === normItemType || normSched.includes(normItemType) || normItemType.includes(normSched);
+                      });
+                      if (match && match.quantity != null && match.quantity > 0) {
+                        custQty = match.quantity;
+                      }
+                    }
                     return (
                       <ReviewRow
                         key={itemId}
@@ -2708,6 +2769,7 @@ function QuoteBuilder({
                         onMoveDown={() => moveItem(idx, idx + 1)}
                         onMoveToBottom={() => moveItem(idx, orderedSelectedItems.length - 1)}
                         onSequenceChange={(newPos: number) => moveItem(idx, newPos - 1)}
+                        customerScheduleQty={custQty}
                       />
                     );
                   })}

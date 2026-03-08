@@ -215,3 +215,5 @@
 - [x] Make quote builder dialog wider (near full-screen) to reduce horizontal scrolling
 - [x] Global margin field should instantly apply to ALL lines without needing select-all first
 - [x] Allow selecting specific lines to change their margin independently after global is set
+- [x] Fix auto-sort: bundled items should stay with their type group in correct position, not pushed to end
+- [x] Highlight quantity mismatches between customer schedule and supplier quotes in Step 2 review table

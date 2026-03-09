@@ -248,3 +248,8 @@
 - [x] Analytics tab: visual charts (bar chart, pie chart, trend over time)
 - [x] Analytics tab: add to sidebar navigation
 - [x] Analytics tab: all data tracked globally across all users
+- [x] Clean up test/archived data from database so analytics only shows real quotes
+- [x] Fix analytics queries to exclude archived projects from counts
+- [x] Clean up duplicate salespersons (53 test John Smiths removed)
+- [x] Archive test suppliers (TrackSup-*, Test Supplier No Markup) and duplicate Everlite/Luxson entries
+- [x] Fix company settings with correct MM Albion details (address, phone, fax, email)

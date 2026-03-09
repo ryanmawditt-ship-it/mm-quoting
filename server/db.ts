@@ -581,21 +581,38 @@ export async function getAnalyticsOverview() {
     count: count(),
   }).from(projects).where(ne(projects.status, "archived")).groupBy(projects.status);
 
-  // Total customer quotes
-  const totalQuotesResult = await db.select({ count: count() }).from(customerQuotes);
-  const totalQuotes = totalQuotesResult[0]?.count ?? 0;
+  // Get IDs of non-archived projects to filter quotes
+  const activeProjectIds = await db.select({ id: projects.id }).from(projects).where(ne(projects.status, "archived"));
+  const activeIds = activeProjectIds.map(p => p.id);
 
-  // Customer quotes by status
-  const quotesByStatus = await db.select({
-    status: customerQuotes.status,
-    count: count(),
-  }).from(customerQuotes).groupBy(customerQuotes.status);
+  // Total customer quotes (only from non-archived projects)
+  let totalQuotes = 0;
+  let quotesByStatus: { status: string; count: number }[] = [];
+  let allActiveQuoteIds: number[] = [];
 
-  // Total revenue from won quotes (sum of sellPrice * quantity for won customer quotes)
-  const wonQuoteIds = await db.select({ id: customerQuotes.id })
-    .from(customerQuotes)
-    .where(eq(customerQuotes.status, "won"));
-  const wonIds = wonQuoteIds.map(q => q.id);
+  if (activeIds.length > 0) {
+    const totalQuotesResult = await db.select({ count: count() }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds));
+    totalQuotes = totalQuotesResult[0]?.count ?? 0;
+
+    // Customer quotes by status
+    quotesByStatus = await db.select({
+      status: customerQuotes.status,
+      count: count(),
+    }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds)).groupBy(customerQuotes.status);
+
+    // Get all active quote IDs for line item calculations
+    const activeQuotes = await db.select({ id: customerQuotes.id }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds));
+    allActiveQuoteIds = activeQuotes.map(q => q.id);
+  }
+
+  // Total revenue from won quotes (only from non-archived projects)
+  let wonIds: number[] = [];
+  if (activeIds.length > 0) {
+    const wonQuoteIds = await db.select({ id: customerQuotes.id })
+      .from(customerQuotes)
+      .where(and(eq(customerQuotes.status, "won"), inArray(customerQuotes.projectId, activeIds)));
+    wonIds = wonQuoteIds.map(q => q.id);
+  }
 
   let totalWonRevenue = 0;
   if (wonIds.length > 0) {
@@ -605,12 +622,12 @@ export async function getAnalyticsOverview() {
     totalWonRevenue = parseFloat(revenueResult[0]?.total ?? '0');
   }
 
-  // Total value of all quotes sent (sum of sellPrice * quantity for all customer quotes)
+  // Total value of all quotes (only from non-archived projects)
   let totalQuotedValue = 0;
-  if (totalQuotes > 0) {
+  if (allActiveQuoteIds.length > 0) {
     const quotedResult = await db.select({
       total: sql<string>`SUM(CAST(${customerQuoteLineItems.sellPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
-    }).from(customerQuoteLineItems);
+    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, allActiveQuoteIds));
     totalQuotedValue = parseFloat(quotedResult[0]?.total ?? '0');
   }
 
@@ -646,20 +663,29 @@ export async function getAnalyticsByCustomer() {
     status: projects.status,
   }).from(projects).where(ne(projects.status, "archived"));
 
-  // Get all customer quotes with their project IDs
-  const allCustomerQuotes = await db.select({
-    id: customerQuotes.id,
-    projectId: customerQuotes.projectId,
-    status: customerQuotes.status,
-  }).from(customerQuotes);
+  // Build a set of active project IDs for filtering
+  const activeProjectIdSet = new Set(allProjects.map(p => p.id));
 
-  // Get all customer quote line items for value calculations
-  const allLineItemsData = await db.select({
-    customerQuoteId: customerQuoteLineItems.customerQuoteId,
-    sellPrice: customerQuoteLineItems.sellPrice,
-    costPrice: customerQuoteLineItems.costPrice,
-    quantity: customerQuoteLineItems.quantity,
-  }).from(customerQuoteLineItems);
+  // Get customer quotes only from non-archived projects
+  const activeProjectIds = allProjects.map(p => p.id);
+  const allCustomerQuotes = activeProjectIds.length > 0
+    ? await db.select({
+        id: customerQuotes.id,
+        projectId: customerQuotes.projectId,
+        status: customerQuotes.status,
+      }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeProjectIds))
+    : [];
+
+  // Get line items only for quotes from non-archived projects
+  const activeQuoteIds = allCustomerQuotes.map(q => q.id);
+  const allLineItemsData = activeQuoteIds.length > 0
+    ? await db.select({
+        customerQuoteId: customerQuoteLineItems.customerQuoteId,
+        sellPrice: customerQuoteLineItems.sellPrice,
+        costPrice: customerQuoteLineItems.costPrice,
+        quantity: customerQuoteLineItems.quantity,
+      }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, activeQuoteIds))
+    : [];
 
   // Build a map of quoteId -> total sell value and cost value
   const quoteValues = new Map<number, { sell: number; cost: number }>();
@@ -742,20 +768,29 @@ export async function getAnalyticsTimeline() {
   const db = await getDb();
   if (!db) return [];
 
-  // Get customer quotes with creation dates for timeline
-  const quotes = await db.select({
-    id: customerQuotes.id,
-    status: customerQuotes.status,
-    createdAt: customerQuotes.createdAt,
-    projectId: customerQuotes.projectId,
-  }).from(customerQuotes).orderBy(customerQuotes.createdAt);
+  // Get non-archived project IDs
+  const activeProjectIds = await db.select({ id: projects.id }).from(projects).where(ne(projects.status, "archived"));
+  const activeIds = activeProjectIds.map(p => p.id);
 
-  // Get line item totals per quote
-  const allLineItemsData = await db.select({
-    customerQuoteId: customerQuoteLineItems.customerQuoteId,
-    sellPrice: customerQuoteLineItems.sellPrice,
-    quantity: customerQuoteLineItems.quantity,
-  }).from(customerQuoteLineItems);
+  // Get customer quotes only from non-archived projects
+  const quotes = activeIds.length > 0
+    ? await db.select({
+        id: customerQuotes.id,
+        status: customerQuotes.status,
+        createdAt: customerQuotes.createdAt,
+        projectId: customerQuotes.projectId,
+      }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds)).orderBy(customerQuotes.createdAt)
+    : [];
+
+  // Get line item totals per quote (only active quotes)
+  const activeQuoteIds = quotes.map(q => q.id);
+  const allLineItemsData = activeQuoteIds.length > 0
+    ? await db.select({
+        customerQuoteId: customerQuoteLineItems.customerQuoteId,
+        sellPrice: customerQuoteLineItems.sellPrice,
+        quantity: customerQuoteLineItems.quantity,
+      }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, activeQuoteIds))
+    : [];
 
   const quoteValues = new Map<number, number>();
   for (const li of allLineItemsData) {

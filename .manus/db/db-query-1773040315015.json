@@ -1,0 +1,502 @@
+{
+  "query": "SELECT id, name, customerName, status FROM projects ORDER BY id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, name, customerName, status FROM projects ORDER BY id",
+  "rows": [
+    {
+      "id": "30008",
+      "name": "Bazaar Restaurant",
+      "customerName": "Electract",
+      "status": "archived"
+    },
+    {
+      "id": "60001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60002",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60003",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60004",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60006",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60008",
+      "name": "Supplier Tracking Test",
+      "customerName": "Test Customer",
+      "status": "archived"
+    },
+    {
+      "id": "60009",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60011",
+      "name": "Supplier Tracking Test",
+      "customerName": "Test Customer",
+      "status": "archived"
+    },
+    {
+      "id": "60012",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60014",
+      "name": "Supplier Tracking Test",
+      "customerName": "Test Customer",
+      "status": "archived"
+    },
+    {
+      "id": "60015",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "60017",
+      "name": "SupTrack-1772849523027",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90003",
+      "name": "SupTrack-1772877330529",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90004",
+      "name": "Ipswich Grammar",
+      "customerName": "Electract",
+      "status": "archived"
+    },
+    {
+      "id": "90005",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90007",
+      "name": "SupTrack-1772878066850",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90008",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90010",
+      "name": "SupTrack-1772878637619",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90011",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90013",
+      "name": "SupTrack-1772879435896",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90014",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90016",
+      "name": "SupTrack-1772879895470",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90017",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90019",
+      "name": "SupTrack-1772880412174",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90020",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90022",
+      "name": "SupTrack-1772880792947",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90023",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90025",
+      "name": "SupTrack-1772882103557",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90026",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90028",
+      "name": "SupTrack-1772882922830",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "90029",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "90031",
+      "name": "SupTrack-1772883461287",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "120001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "120003",
+      "name": "SupTrack-1772927150560",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "120004",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "120006",
+      "name": "SupTrack-1772927186674",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "120007",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "120009",
+      "name": "SupTrack-1772927552851",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "150001",
+      "name": "St Thomas more",
+      "customerName": "Electract",
+      "status": "archived"
+    },
+    {
+      "id": "150002",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "150004",
+      "name": "SupTrack-1772930602121",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "150005",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "150007",
+      "name": "SupTrack-1772931155075",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "150008",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "150010",
+      "name": "SupTrack-1772931777058",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "150011",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "150013",
+      "name": "SupTrack-1772932139520",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "150014",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "150016",
+      "name": "SupTrack-1772933255522",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "180001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "180003",
+      "name": "SupTrack-1772935771547",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "180004",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "180006",
+      "name": "SupTrack-1772936608788",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "180007",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "pending"
+    },
+    {
+      "id": "180009",
+      "name": "SupTrack-1772936993484",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "210001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "210003",
+      "name": "SupTrack-1772938944943",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "240001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "240003",
+      "name": "SupTrack-1772940944067",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "270001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "270003",
+      "name": "SupTrack-1772942412131",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "300001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "300003",
+      "name": "SupTrack-1772944404403",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "330001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "330003",
+      "name": "SupTrack-1772952444755",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "330004",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "330006",
+      "name": "SupTrack-1772952747484",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "360001",
+      "name": "Bazaar Lighting",
+      "customerName": "Electract",
+      "status": "archived"
+    },
+    {
+      "id": "390001",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "390003",
+      "name": "SupTrack-1773037359291",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "390004",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "390006",
+      "name": "SupTrack-1773037388017",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "390007",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "390009",
+      "name": "SupTrack-1773037416197",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "390010",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "390012",
+      "name": "SupTrack-1773037444509",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "390013",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "390015",
+      "name": "SupTrack-1773037820335",
+      "customerName": "Test",
+      "status": "archived"
+    },
+    {
+      "id": "420002",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "archived"
+    },
+    {
+      "id": "420004",
+      "name": "SupTrack-1773039609652",
+      "customerName": "Test",
+      "status": "archived"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcustomerName\tstatus\n30008\tBazaar Restaurant\tElectract\tarchived\n60001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60002\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60003\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60004\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60006\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60008\tSupplier Tracking Test\tTest Customer\tarchived\n60009\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60011\tSupplier Tracking Test\tTest Customer\tarchived\n60012\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60014\tSupplier Tracking Test\tTest Customer\tarchived\n60015\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n60017\tSupTrack-1772849523027\tTest\tarchived\n90001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90003\tSupTrack-1772877330529\tTest\tarchived\n90004\tIpswich Grammar\tElectract\tarchived\n90005\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90007\tSupTrack-1772878066850\tTest\tarchived\n90008\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90010\tSupTrack-1772878637619\tTest\tarchived\n90011\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90013\tSupTrack-1772879435896\tTest\tarchived\n90014\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90016\tSupTrack-1772879895470\tTest\tarchived\n90017\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90019\tSupTrack-1772880412174\tTest\tarchived\n90020\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90022\tSupTrack-1772880792947\tTest\tarchived\n90023\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90025\tSupTrack-1772882103557\tTest\tarchived\n90026\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90028\tSupTrack-1772882922830\tTest\tarchived\n90029\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n90031\tSupTrack-1772883461287\tTest\tarchived\n120001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n120003\tSupTrack-1772927150560\tTest\tarchived\n120004\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n120006\tSupTrack-1772927186674\tTest\tarchived\n120007\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n120009\tSupTrack-1772927552851\tTest\tarchived\n150001\tSt Thomas more\tElectract\tarchived\n150002\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n150004\tSupTrack-1772930602121\tTest\tarchived\n150005\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n150007\tSupTrack-1772931155075\tTest\tarchived\n150008\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n150010\tSupTrack-1772931777058\tTest\tarchived\n150011\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n150013\tSupTrack-1772932139520\tTest\tarchived\n150014\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n150016\tSupTrack-1772933255522\tTest\tarchived\n180001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n180003\tSupTrack-1772935771547\tTest\tarchived\n180004\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n180006\tSupTrack-1772936608788\tTest\tarchived\n180007\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tpending\n180009\tSupTrack-1772936993484\tTest\tarchived\n210001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n210003\tSupTrack-1772938944943\tTest\tarchived\n240001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n240003\tSupTrack-1772940944067\tTest\tarchived\n270001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n270003\tSupTrack-1772942412131\tTest\tarchived\n300001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n300003\tSupTrack-1772944404403\tTest\tarchived\n330001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n330003\tSupTrack-1772952444755\tTest\tarchived\n330004\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n330006\tSupTrack-1772952747484\tTest\tarchived\n360001\tBazaar Lighting\tElectract\tarchived\n390001\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n390003\tSupTrack-1773037359291\tTest\tarchived\n390004\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n390006\tSupTrack-1773037388017\tTest\tarchived\n390007\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n390009\tSupTrack-1773037416197\tTest\tarchived\n390010\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n390012\tSupTrack-1773037444509\tTest\tarchived\n390013\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n390015\tSupTrack-1773037820335\tTest\tarchived\n420002\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tarchived\n420004\tSupTrack-1773039609652\tTest\tarchived\n",
+  "stderr": "",
+  "execution_time_ms": 1593
+}

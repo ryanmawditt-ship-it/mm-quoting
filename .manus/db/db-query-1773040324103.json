@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name, customerName, status FROM projects WHERE status != 'archived' ORDER BY id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, name, customerName, status FROM projects WHERE status != 'archived' ORDER BY id",
+  "rows": [
+    {
+      "id": "180007",
+      "name": "Bazaar Restaurant - Stage 1",
+      "customerName": "Electract Energy Pty Ltd",
+      "status": "pending"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcustomerName\tstatus\n180007\tBazaar Restaurant - Stage 1\tElectract Energy Pty Ltd\tpending\n",
+  "stderr": "",
+  "execution_time_ms": 1495
+}

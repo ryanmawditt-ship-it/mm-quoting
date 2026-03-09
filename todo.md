@@ -241,3 +241,4 @@
 - [x] Fix: Password protection not prompting when loading site in new tab (wired PasswordGate into App.tsx)
 - [x] Add delete option for customer quotes within each project to remove duplicates
 - [x] Fix: Published site PDF shows default blue colors and missing company info instead of saved settings (made settings global, not per-user)
+- [x] Make all data shared across all password-auth users (projects, quotes, suppliers, salespersons, settings)

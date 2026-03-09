@@ -118,10 +118,11 @@ export async function upsertCompanySettings(userId: number, data: Omit<InsertCom
 /**
  * Salespersons
  */
-export async function getSalespersons(userId: number) {
+export async function getSalespersons(userId?: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(salespersons).where(eq(salespersons.userId, userId));
+  // Single-company app: return all salespersons regardless of userId
+  return db.select().from(salespersons);
 }
 
 export async function createSalesperson(userId: number, name: string, email?: string) {
@@ -133,23 +134,21 @@ export async function createSalesperson(userId: number, name: string, email?: st
 /**
  * Suppliers
  */
-export async function getSuppliers(userId: number, includeArchived: boolean = false) {
+export async function getSuppliers(userId?: number, includeArchived: boolean = false) {
   const db = await getDb();
   if (!db) return [];
+  // Single-company app: return all suppliers regardless of userId
   if (includeArchived) {
-    return db.select().from(suppliers).where(eq(suppliers.userId, userId));
+    return db.select().from(suppliers);
   }
-  return db.select().from(suppliers).where(
-    and(eq(suppliers.userId, userId), eq(suppliers.isArchived, 0))
-  );
+  return db.select().from(suppliers).where(eq(suppliers.isArchived, 0));
 }
 
-export async function getArchivedSuppliers(userId: number) {
+export async function getArchivedSuppliers(userId?: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(suppliers).where(
-    and(eq(suppliers.userId, userId), eq(suppliers.isArchived, 1))
-  );
+  // Single-company app: return all archived suppliers regardless of userId
+  return db.select().from(suppliers).where(eq(suppliers.isArchived, 1));
 }
 
 export async function archiveSupplier(id: number) {
@@ -244,8 +243,8 @@ export async function getOrCreateSupplierByName(userId: number, name: string, co
 
   const normInput = normaliseSupplierName(name);
 
-  // Fetch all suppliers for this user and match by normalised name
-  const existing = await db.select().from(suppliers).where(eq(suppliers.userId, userId));
+  // Single-company app: fetch all suppliers regardless of userId for matching
+  const existing = await db.select().from(suppliers);
 
   // 1. Try exact normalised match
   let match = existing.find(s => normaliseSupplierName(s.name) === normInput);
@@ -278,23 +277,21 @@ export async function getOrCreateSupplierByName(userId: number, name: string, co
 /**
  * Projects
  */
-export async function getProjects(userId: number, includeArchived: boolean = false) {
+export async function getProjects(userId?: number, includeArchived: boolean = false) {
   const db = await getDb();
   if (!db) return [];
+  // Single-company app: return all projects regardless of userId
   if (includeArchived) {
-    return db.select().from(projects).where(eq(projects.userId, userId));
+    return db.select().from(projects);
   }
-  return db.select().from(projects).where(
-    and(eq(projects.userId, userId), ne(projects.status, "archived"))
-  );
+  return db.select().from(projects).where(ne(projects.status, "archived"));
 }
 
-export async function getArchivedProjects(userId: number) {
+export async function getArchivedProjects(userId?: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(projects).where(
-    and(eq(projects.userId, userId), eq(projects.status, "archived"))
-  );
+  // Single-company app: return all archived projects regardless of userId
+  return db.select().from(projects).where(eq(projects.status, "archived"));
 }
 
 export async function archiveProject(id: number) {

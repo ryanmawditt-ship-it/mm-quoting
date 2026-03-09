@@ -10,6 +10,7 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import PasswordLoginPage from "./pages/PasswordLoginPage";
 import { useState, useEffect, useCallback } from "react";
 import { Loader2 } from "lucide-react";
@@ -47,6 +48,13 @@ function Router() {
         {() => (
           <DashboardWrapper>
             <SuppliersPage />
+          </DashboardWrapper>
+        )}
+      </Route>
+      <Route path={"/dashboard/analytics"}>
+        {() => (
+          <DashboardWrapper>
+            <AnalyticsPage />
           </DashboardWrapper>
         )}
       </Route>

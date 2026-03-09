@@ -242,3 +242,9 @@
 - [x] Add delete option for customer quotes within each project to remove duplicates
 - [x] Fix: Published site PDF shows default blue colors and missing company info instead of saved settings (made settings global, not per-user)
 - [x] Make all data shared across all password-auth users (projects, quotes, suppliers, salespersons, settings)
+- [x] Analytics tab: backend queries for quotes per customer, win rates, total dollar values
+- [x] Analytics tab: overall KPI cards (total quotes, won quotes, total revenue, win rate)
+- [x] Analytics tab: per-customer breakdown table with quote count, win count, win rate, total value
+- [x] Analytics tab: visual charts (bar chart, pie chart, trend over time)
+- [x] Analytics tab: add to sidebar navigation
+- [x] Analytics tab: all data tracked globally across all users

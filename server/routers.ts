@@ -41,6 +41,9 @@ import {
   addProjectSupplier,
   removeProjectSupplier,
   updateProjectSupplierNotes,
+  getAnalyticsOverview,
+  getAnalyticsByCustomer,
+  getAnalyticsTimeline,
 } from "./db";
 
 export const appRouter = router({
@@ -378,6 +381,13 @@ export const appRouter = router({
     getByCustomerQuote: protectedProcedure
       .input(z.object({ customerQuoteId: z.number() }))
       .query(({ input }) => getCustomerQuoteLineItems(input.customerQuoteId)),
+  }),
+
+  // Analytics - global management dashboard
+  analytics: router({
+    overview: protectedProcedure.query(() => getAnalyticsOverview()),
+    byCustomer: protectedProcedure.query(() => getAnalyticsByCustomer()),
+    timeline: protectedProcedure.query(() => getAnalyticsTimeline()),
   }),
 });
 

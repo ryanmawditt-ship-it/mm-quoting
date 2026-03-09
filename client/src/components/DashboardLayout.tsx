@@ -13,13 +13,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { FolderKanban, PanelLeft, Settings, Truck, Zap } from "lucide-react";
+import { BarChart3, FolderKanban, PanelLeft, Settings, Truck, Zap } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 const menuItems = [
   { icon: FolderKanban, label: "Projects", path: "/dashboard" },
   { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers" },
+  { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 

@@ -1,4 +1,4 @@
-import { eq, inArray, and, ne } from "drizzle-orm";
+import { eq, inArray, and, ne, sql, count, sum } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, companySettings, InsertCompanySettings, salespersons, suppliers, projects, supplierQuotes, lineItems, customerQuotes, customerQuoteLineItems, projectSuppliers } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -563,4 +563,224 @@ export async function deleteCustomerQuote(id: number) {
   await db.delete(customerQuotes).where(eq(customerQuotes.id, id));
 }
 
-// TODO: add additional feature queries as needed
+/**
+ * Analytics - global management dashboard queries
+ */
+
+export async function getAnalyticsOverview() {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Total projects (excluding archived)
+  const totalProjectsResult = await db.select({ count: count() }).from(projects).where(ne(projects.status, "archived"));
+  const totalProjects = totalProjectsResult[0]?.count ?? 0;
+
+  // Projects by status
+  const projectsByStatus = await db.select({
+    status: projects.status,
+    count: count(),
+  }).from(projects).where(ne(projects.status, "archived")).groupBy(projects.status);
+
+  // Total customer quotes
+  const totalQuotesResult = await db.select({ count: count() }).from(customerQuotes);
+  const totalQuotes = totalQuotesResult[0]?.count ?? 0;
+
+  // Customer quotes by status
+  const quotesByStatus = await db.select({
+    status: customerQuotes.status,
+    count: count(),
+  }).from(customerQuotes).groupBy(customerQuotes.status);
+
+  // Total revenue from won quotes (sum of sellPrice * quantity for won customer quotes)
+  const wonQuoteIds = await db.select({ id: customerQuotes.id })
+    .from(customerQuotes)
+    .where(eq(customerQuotes.status, "won"));
+  const wonIds = wonQuoteIds.map(q => q.id);
+
+  let totalWonRevenue = 0;
+  if (wonIds.length > 0) {
+    const revenueResult = await db.select({
+      total: sql<string>`SUM(CAST(${customerQuoteLineItems.sellPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
+    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, wonIds));
+    totalWonRevenue = parseFloat(revenueResult[0]?.total ?? '0');
+  }
+
+  // Total value of all quotes sent (sum of sellPrice * quantity for all customer quotes)
+  let totalQuotedValue = 0;
+  if (totalQuotes > 0) {
+    const quotedResult = await db.select({
+      total: sql<string>`SUM(CAST(${customerQuoteLineItems.sellPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
+    }).from(customerQuoteLineItems);
+    totalQuotedValue = parseFloat(quotedResult[0]?.total ?? '0');
+  }
+
+  // Total cost value (for margin calculation)
+  let totalCostValue = 0;
+  if (wonIds.length > 0) {
+    const costResult = await db.select({
+      total: sql<string>`SUM(CAST(${customerQuoteLineItems.costPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
+    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, wonIds));
+    totalCostValue = parseFloat(costResult[0]?.total ?? '0');
+  }
+
+  return {
+    totalProjects,
+    projectsByStatus,
+    totalQuotes,
+    quotesByStatus,
+    totalWonRevenue,
+    totalQuotedValue,
+    totalCostValue,
+    averageMargin: totalWonRevenue > 0 ? ((totalWonRevenue - totalCostValue) / totalWonRevenue) * 100 : 0,
+  };
+}
+
+export async function getAnalyticsByCustomer() {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get all non-archived projects with their customer names
+  const allProjects = await db.select({
+    id: projects.id,
+    customerName: projects.customerName,
+    status: projects.status,
+  }).from(projects).where(ne(projects.status, "archived"));
+
+  // Get all customer quotes with their project IDs
+  const allCustomerQuotes = await db.select({
+    id: customerQuotes.id,
+    projectId: customerQuotes.projectId,
+    status: customerQuotes.status,
+  }).from(customerQuotes);
+
+  // Get all customer quote line items for value calculations
+  const allLineItemsData = await db.select({
+    customerQuoteId: customerQuoteLineItems.customerQuoteId,
+    sellPrice: customerQuoteLineItems.sellPrice,
+    costPrice: customerQuoteLineItems.costPrice,
+    quantity: customerQuoteLineItems.quantity,
+  }).from(customerQuoteLineItems);
+
+  // Build a map of quoteId -> total sell value and cost value
+  const quoteValues = new Map<number, { sell: number; cost: number }>();
+  for (const li of allLineItemsData) {
+    const existing = quoteValues.get(li.customerQuoteId) ?? { sell: 0, cost: 0 };
+    existing.sell += parseFloat(String(li.sellPrice)) * li.quantity;
+    existing.cost += parseFloat(String(li.costPrice)) * li.quantity;
+    quoteValues.set(li.customerQuoteId, existing);
+  }
+
+  // Build a map of projectId -> customerName
+  const projectCustomerMap = new Map<number, string>();
+  for (const p of allProjects) {
+    projectCustomerMap.set(p.id, p.customerName);
+  }
+
+  // Aggregate by customer name
+  const customerStats = new Map<string, {
+    customerName: string;
+    totalProjects: number;
+    totalQuotes: number;
+    wonQuotes: number;
+    lostQuotes: number;
+    totalQuotedValue: number;
+    totalWonValue: number;
+    totalCostValue: number;
+  }>();
+
+  // Count projects per customer
+  for (const p of allProjects) {
+    const name = p.customerName;
+    if (!customerStats.has(name)) {
+      customerStats.set(name, {
+        customerName: name,
+        totalProjects: 0,
+        totalQuotes: 0,
+        wonQuotes: 0,
+        lostQuotes: 0,
+        totalQuotedValue: 0,
+        totalWonValue: 0,
+        totalCostValue: 0,
+      });
+    }
+    customerStats.get(name)!.totalProjects++;
+  }
+
+  // Count quotes per customer
+  for (const q of allCustomerQuotes) {
+    const customerName = projectCustomerMap.get(q.projectId);
+    if (!customerName) continue;
+    if (!customerStats.has(customerName)) {
+      customerStats.set(customerName, {
+        customerName,
+        totalProjects: 0,
+        totalQuotes: 0,
+        wonQuotes: 0,
+        lostQuotes: 0,
+        totalQuotedValue: 0,
+        totalWonValue: 0,
+        totalCostValue: 0,
+      });
+    }
+    const stats = customerStats.get(customerName)!;
+    stats.totalQuotes++;
+    const values = quoteValues.get(q.id) ?? { sell: 0, cost: 0 };
+    stats.totalQuotedValue += values.sell;
+    if (q.status === 'won' || q.status === 'accepted') {
+      stats.wonQuotes++;
+      stats.totalWonValue += values.sell;
+      stats.totalCostValue += values.cost;
+    } else if (q.status === 'lost') {
+      stats.lostQuotes++;
+    }
+  }
+
+  return Array.from(customerStats.values()).sort((a, b) => b.totalQuotedValue - a.totalQuotedValue);
+}
+
+export async function getAnalyticsTimeline() {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get customer quotes with creation dates for timeline
+  const quotes = await db.select({
+    id: customerQuotes.id,
+    status: customerQuotes.status,
+    createdAt: customerQuotes.createdAt,
+    projectId: customerQuotes.projectId,
+  }).from(customerQuotes).orderBy(customerQuotes.createdAt);
+
+  // Get line item totals per quote
+  const allLineItemsData = await db.select({
+    customerQuoteId: customerQuoteLineItems.customerQuoteId,
+    sellPrice: customerQuoteLineItems.sellPrice,
+    quantity: customerQuoteLineItems.quantity,
+  }).from(customerQuoteLineItems);
+
+  const quoteValues = new Map<number, number>();
+  for (const li of allLineItemsData) {
+    const existing = quoteValues.get(li.customerQuoteId) ?? 0;
+    quoteValues.set(li.customerQuoteId, existing + parseFloat(String(li.sellPrice)) * li.quantity);
+  }
+
+  // Group by month
+  const monthlyData = new Map<string, { month: string; quotesCreated: number; quotesWon: number; totalValue: number; wonValue: number }>();
+
+  for (const q of quotes) {
+    const date = new Date(q.createdAt);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthlyData.has(monthKey)) {
+      monthlyData.set(monthKey, { month: monthKey, quotesCreated: 0, quotesWon: 0, totalValue: 0, wonValue: 0 });
+    }
+    const data = monthlyData.get(monthKey)!;
+    data.quotesCreated++;
+    const value = quoteValues.get(q.id) ?? 0;
+    data.totalValue += value;
+    if (q.status === 'won' || q.status === 'accepted') {
+      data.quotesWon++;
+      data.wonValue += value;
+    }
+  }
+
+  return Array.from(monthlyData.values()).sort((a, b) => a.month.localeCompare(b.month));
+}

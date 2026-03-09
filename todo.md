@@ -240,3 +240,4 @@
 - [x] Set up site password protection (password: 880) for staff access
 - [x] Fix: Password protection not prompting when loading site in new tab (wired PasswordGate into App.tsx)
 - [x] Add delete option for customer quotes within each project to remove duplicates
+- [x] Fix: Published site PDF shows default blue colors and missing company info instead of saved settings (made settings global, not per-user)

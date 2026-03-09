@@ -92,18 +92,20 @@ export async function getUserByOpenId(openId: string) {
 /**
  * Company Settings
  */
-export async function getCompanySettings(userId: number) {
+export async function getCompanySettings(userId?: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(companySettings).where(eq(companySettings.userId, userId)).limit(1);
+  // Single-company app: return the first settings row regardless of userId
+  // This ensures password-auth users and OAuth users share the same company settings
+  const result = await db.select().from(companySettings).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function upsertCompanySettings(userId: number, data: Omit<InsertCompanySettings, 'userId'>) {
   const db = await getDb();
   if (!db) return;
-  // Check if settings already exist for this user
-  const existing = await db.select({ id: companySettings.id }).from(companySettings).where(eq(companySettings.userId, userId)).limit(1);
+  // Single-company app: update the first existing row regardless of userId, or create new
+  const existing = await db.select({ id: companySettings.id }).from(companySettings).limit(1);
   if (existing.length > 0) {
     // Update existing row
     await db.update(companySettings).set(data).where(eq(companySettings.id, existing[0].id));

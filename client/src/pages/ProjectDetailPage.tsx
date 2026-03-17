@@ -69,6 +69,9 @@ import {
   FileUp,
   ListOrdered,
   Sparkles,
+  MessageSquare,
+  ClipboardPaste,
+  PenLine,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useParams } from "wouter";
@@ -196,6 +199,15 @@ export default function ProjectDetailPage() {
   const [showExtractedPreview, setShowExtractedPreview] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Email paste & manual quote state
+  const [showEmailPaste, setShowEmailPaste] = useState(false);
+  const [emailText, setEmailText] = useState("");
+  const [extractingEmail, setExtractingEmail] = useState(false);
+  const [showManualQuote, setShowManualQuote] = useState(false);
+  const [manualSupplierName, setManualSupplierName] = useState("");
+  const [manualQuoteNumber, setManualQuoteNumber] = useState("");
+  const [creatingManualQuote, setCreatingManualQuote] = useState(false);
 
   // Customer quote builder state
   const [quoteBuilderOpen, setQuoteBuilderOpen] = useState(false);
@@ -578,60 +590,235 @@ export default function ProjectDetailPage() {
           <div>
             <h2 className="text-lg font-semibold">Supplier Quotes</h2>
             <p className="text-sm text-muted-foreground">
-              Upload supplier quote PDFs — supplier info and line items are extracted automatically by AI
+              Upload PDFs, paste email quotes, or add items manually
             </p>
           </div>
 
-          {/* Upload Drop Zone */}
-          <Card
-            className={`border-2 border-dashed transition-all cursor-pointer ${
-              dragOver
-                ? "border-primary bg-primary/5 scale-[1.01]"
-                : uploading
-                ? "border-primary/50 bg-primary/5"
-                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
-            }`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={() => !uploading && fileInputRef.current?.click()}
-          >
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={uploading}
-              />
-              {uploading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold">Uploading & extracting...</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      AI is reading the supplier quote PDF and extracting all line items
+          {/* Input Methods Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Upload PDF */}
+            <Card
+              className={`border-2 border-dashed transition-all cursor-pointer ${
+                dragOver
+                  ? "border-primary bg-primary/5 scale-[1.01]"
+                  : uploading
+                  ? "border-primary/50 bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
+              }`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => !uploading && fileInputRef.current?.click()}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-xs font-semibold">Extracting...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                    <p className="text-sm font-semibold">Upload PDF</p>
+                    <p className="text-xs text-muted-foreground">
+                      Drop or click to upload a supplier quote PDF
                     </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Paste Email Quote */}
+            <Card
+              className="border-2 border-dashed border-muted-foreground/25 hover:border-amber-500/50 hover:bg-amber-50/30 transition-all cursor-pointer"
+              onClick={() => { setShowEmailPaste(true); setShowManualQuote(false); }}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
+                    <ClipboardPaste className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <p className="text-sm font-semibold">Paste Email Quote</p>
+                  <p className="text-xs text-muted-foreground">
+                    Paste text from an email — AI extracts line items
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Add Manual Quote */}
+            <Card
+              className="border-2 border-dashed border-muted-foreground/25 hover:border-green-500/50 hover:bg-green-50/30 transition-all cursor-pointer"
+              onClick={() => { setShowManualQuote(true); setShowEmailPaste(false); }}
+            >
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <PenLine className="h-6 w-6 text-green-600" />
+                  </div>
+                  <p className="text-sm font-semibold">Manual Entry</p>
+                  <p className="text-xs text-muted-foreground">
+                    Create a supplier quote and add items by hand
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Email Paste Panel */}
+          {showEmailPaste && (
+            <Card className="border-amber-200 bg-amber-50/30">
+              <CardContent className="p-5 space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <ClipboardPaste className="h-4 w-4 text-amber-600" />
+                  Paste Email / Text Quote
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Paste the email body or any text containing supplier pricing. AI will extract the supplier name, line items, quantities, and prices automatically.
+                </p>
+                <Textarea
+                  placeholder={`Paste your email or quote text here...\n\nExample:\nHi,\n\nPlease find below our pricing for the Bazaar project:\n\nType WL01 - Solar Wall Light x 6 @ $477.00 each\nType WL02 - Harbour Wall Light x 8 @ $510.00 each\nFreight - $1,000.00\n\nRegards,\nJohn Smith\nLumen8 Lighting`}
+                  value={emailText}
+                  onChange={(e) => setEmailText(e.target.value)}
+                  rows={10}
+                  className="font-mono text-sm"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setShowEmailPaste(false); setEmailText(""); }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={extractingEmail || emailText.trim().length < 10}
+                    onClick={async () => {
+                      setExtractingEmail(true);
+                      try {
+                        const response = await fetch("/api/extract-email-quote", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ projectId, text: emailText }),
+                        });
+                        if (!response.ok) {
+                          const errData = await response.json().catch(() => ({}));
+                          throw new Error(errData.error || "Extraction failed");
+                        }
+                        const result = await response.json();
+                        toast.success(`${result.itemCount} line items extracted from ${result.supplierName || "email"}`);
+                        setShowEmailPaste(false);
+                        setEmailText("");
+                        utils.supplierQuotes.getByProject.invalidate({ projectId });
+                        utils.suppliers.list.invalidate();
+                        utils.projectSuppliers.list.invalidate({ projectId });
+                      } catch (error: any) {
+                        toast.error(error.message || "Failed to extract from text");
+                      } finally {
+                        setExtractingEmail(false);
+                      }
+                    }}
+                  >
+                    {extractingEmail ? (
+                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Extracting...</>
+                    ) : (
+                      <><Sparkles className="mr-1 h-4 w-4" /> Extract with AI</>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Manual Quote Creation Panel */}
+          {showManualQuote && (
+            <Card className="border-green-200 bg-green-50/30">
+              <CardContent className="p-5 space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <PenLine className="h-4 w-4 text-green-600" />
+                  Create Manual Supplier Quote
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Create a new supplier quote, then add line items manually. Use this when you have pricing from phone calls, emails, or other sources.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Supplier Name *</Label>
+                    <Input
+                      placeholder="e.g. Lumen8 Lighting"
+                      value={manualSupplierName}
+                      onChange={(e) => setManualSupplierName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Quote Number (optional)</Label>
+                    <Input
+                      placeholder="e.g. Q-2024-001"
+                      value={manualQuoteNumber}
+                      onChange={(e) => setManualQuoteNumber(e.target.value)}
+                    />
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Upload className="h-7 w-7 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">
-                      Drop a supplier quote PDF here, or click to browse
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      AI will automatically extract the supplier name, quote details, and all line items
-                    </p>
-                  </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setShowManualQuote(false); setManualSupplierName(""); setManualQuoteNumber(""); }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={creatingManualQuote || !manualSupplierName.trim()}
+                    onClick={async () => {
+                      setCreatingManualQuote(true);
+                      try {
+                        const response = await fetch("/api/create-manual-supplier-quote", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            projectId,
+                            supplierName: manualSupplierName.trim(),
+                            quoteNumber: manualQuoteNumber || undefined,
+                          }),
+                        });
+                        if (!response.ok) throw new Error("Failed to create quote");
+                        const result = await response.json();
+                        toast.success(`Supplier quote created for ${result.supplierName}. Expand it below to add line items.`);
+                        setShowManualQuote(false);
+                        setManualSupplierName("");
+                        setManualQuoteNumber("");
+                        utils.supplierQuotes.getByProject.invalidate({ projectId });
+                        utils.suppliers.list.invalidate();
+                        utils.projectSuppliers.list.invalidate({ projectId });
+                      } catch (error: any) {
+                        toast.error(error.message || "Failed to create supplier quote");
+                      } finally {
+                        setCreatingManualQuote(false);
+                      }
+                    }}
+                  >
+                    {creatingManualQuote ? (
+                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Creating...</>
+                    ) : (
+                      <><Plus className="mr-1 h-4 w-4" /> Create Quote</>
+                    )}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Extracted Items Preview */}
           {showExtractedPreview && extractedItems.length > 0 && (
@@ -1164,6 +1351,18 @@ function SupplierQuoteCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [addingItem, setAddingItem] = useState(false);
+  const [newItem, setNewItem] = useState({
+    type: "",
+    productCode: "",
+    description: "",
+    quantity: "1",
+    costPrice: "",
+    unitOfMeasure: "EA",
+    leadTimeDays: "",
+    comments: "",
+  });
   const utils = trpc.useUtils();
   const deleteQuoteMutation = trpc.supplierQuotes.delete.useMutation({
     onSuccess: () => {
@@ -1251,6 +1450,157 @@ function SupplierQuoteCard({
 
         {expanded && lineItems && lineItems.length > 0 && (
           <SupplierQuoteTable lineItems={lineItems} />
+        )}
+
+        {/* Add Line Item Button & Form */}
+        {expanded && (
+          <div className="mt-3">
+            {!showAddItem ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddItem(true)}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Add Line Item
+              </Button>
+            ) : (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4 space-y-3">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Manual Line Item
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <Label className="text-xs">Type Code</Label>
+                      <Input
+                        placeholder="e.g. WL01"
+                        value={newItem.type}
+                        onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Product Code</Label>
+                      <Input
+                        placeholder="e.g. ABC-123"
+                        value={newItem.productCode}
+                        onChange={(e) => setNewItem({ ...newItem, productCode: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Quantity</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={newItem.quantity}
+                        onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Cost Price (ex GST)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={newItem.costPrice}
+                        onChange={(e) => setNewItem({ ...newItem, costPrice: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Description *</Label>
+                    <Textarea
+                      placeholder="Full product description..."
+                      value={newItem.description}
+                      onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs">Unit of Measure</Label>
+                      <Input
+                        placeholder="EA"
+                        value={newItem.unitOfMeasure}
+                        onChange={(e) => setNewItem({ ...newItem, unitOfMeasure: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Lead Time (days)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 42"
+                        value={newItem.leadTimeDays}
+                        onChange={(e) => setNewItem({ ...newItem, leadTimeDays: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Notes/Comments</Label>
+                      <Input
+                        placeholder="Optional notes..."
+                        value={newItem.comments}
+                        onChange={(e) => setNewItem({ ...newItem, comments: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddItem(false);
+                        setNewItem({ type: "", productCode: "", description: "", quantity: "1", costPrice: "", unitOfMeasure: "EA", leadTimeDays: "", comments: "" });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={addingItem || !newItem.description.trim()}
+                      onClick={async () => {
+                        setAddingItem(true);
+                        try {
+                          const response = await fetch("/api/add-manual-line-item", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              supplierQuoteId: supplierQuote.id,
+                              type: newItem.type || undefined,
+                              productCode: newItem.productCode || "MANUAL",
+                              description: newItem.description.trim(),
+                              quantity: parseInt(newItem.quantity) || 1,
+                              costPrice: parseFloat(newItem.costPrice) || 0,
+                              unitOfMeasure: newItem.unitOfMeasure || "EA",
+                              leadTimeDays: newItem.leadTimeDays ? parseInt(newItem.leadTimeDays) : undefined,
+                              comments: newItem.comments || undefined,
+                            }),
+                          });
+                          if (!response.ok) throw new Error("Failed to add line item");
+                          toast.success("Line item added");
+                          utils.lineItems.getBySupplierQuote.invalidate({ supplierQuoteId: supplierQuote.id });
+                          setNewItem({ type: "", productCode: "", description: "", quantity: "1", costPrice: "", unitOfMeasure: "EA", leadTimeDays: "", comments: "" });
+                          setShowAddItem(false);
+                        } catch (err) {
+                          toast.error("Failed to add line item");
+                        } finally {
+                          setAddingItem(false);
+                        }
+                      }}
+                    >
+                      {addingItem ? (
+                        <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Adding...</>
+                      ) : (
+                        <><Plus className="mr-1 h-4 w-4" /> Add Item</>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* Delete confirmation dialog */}

@@ -257,3 +257,10 @@
 - [x] Add Lumen8 Architectural Lighting format instructions to AI extraction prompt
 - [x] Fix existing Lumen8 data: WL02, WL05 LED modules now bundled, bronze pipes now priced; SL04, SL05 shades now bundled, drivers now priced
 - [x] Add general CRITICAL PRICE ALIGNMENT rule to prevent price shifting across rows for all suppliers
+- [x] Add manual line item entry to supplier quotes (add individual items by hand)
+- [x] Add text paste + AI extraction for email quotes (paste email text, AI extracts line items)
+- [x] Backend: API endpoint to extract line items from pasted text using AI
+- [x] Frontend: "Add Line Item" button on supplier quote cards with inline form
+- [x] Frontend: "Paste Email Quote" card with text area and AI extraction
+- [x] Frontend: "Manual Entry" card to create supplier quote and add items by hand
+- [x] Fix test cleanup: tests now clean up after themselves (no more test data pollution in production DB)

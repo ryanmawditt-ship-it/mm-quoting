@@ -881,6 +881,336 @@ apiRouter.post("/api/upload-logo", upload.single("file"), async (req: Request, r
 });
 
 // ============================================================
+// POST /api/extract-email-quote
+// Extracts line items from pasted email/text using AI
+// ============================================================
+apiRouter.post("/api/extract-email-quote", async (req: Request, res: Response) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { projectId, text: emailText } = req.body;
+
+    if (!projectId || !emailText || typeof emailText !== "string" || emailText.trim().length < 10) {
+      res.status(400).json({ error: "Missing projectId or text (minimum 10 characters)" });
+      return;
+    }
+
+    // Use AI to extract line items from the pasted text
+    const extractionResult = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert data extraction specialist for Australian electrical supplier quotes. Your job is to extract line items and supplier information from email text, copied quote text, or any free-form text containing pricing information.
+
+The text may come from:
+- A supplier email with pricing listed inline
+- A copied/pasted table from a spreadsheet or document
+- A forwarded quote with items and prices in the body
+- Any free-form text describing products with quantities and prices
+
+**EXTRACTION RULES:**
+1. Extract EVERY item that has a description and/or price
+2. Look for patterns like: product name/code, quantity, unit price, total price
+3. If quantities are not specified, default to 1
+4. If only a total price is given (no unit price), and quantity is known, calculate unitPrice = total / quantity
+5. Items with no price mentioned should have unitPrice=0 and isBundled=true
+6. Look for supplier name in email headers, signatures, or "From:" lines
+7. Look for quote numbers, dates, and validity periods
+8. Extract any delivery/freight information
+9. Group items by type/section if the text has clear groupings
+10. For descriptions: include the FULL text exactly as written
+11. Handle Australian number formats: $1,234.56 or $1234.56
+12. Freight/delivery charges are separate line items with type="FREIGHT"
+
+Return ONLY valid JSON matching the schema. Do not include markdown formatting or code blocks.`,
+        },
+        {
+          role: "user",
+          content: `Extract all line items and supplier information from this email/text quote:\n\n${emailText}`,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "email_quote_extraction",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              supplierName: { type: "string", description: "Supplier company name (use 'Unknown Supplier' if not found)" },
+              supplierContact: { type: ["string", "null"], description: "Contact person name" },
+              supplierEmail: { type: ["string", "null"], description: "Supplier email address" },
+              supplierPhone: { type: ["string", "null"], description: "Supplier phone number" },
+              quoteNumber: { type: ["string", "null"], description: "Quote reference number" },
+              quoteDate: { type: ["string", "null"], description: "Quote date in ISO format (YYYY-MM-DD)" },
+              validityDays: { type: ["number", "null"], description: "Number of days the quote is valid" },
+              deliveryNotes: { type: ["string", "null"], description: "Delivery/freight terms" },
+              lineItems: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    type: { type: ["string", "null"], description: "Type/section code if grouped" },
+                    productCode: { type: "string", description: "Product/part code (use 'MANUAL' if not found)" },
+                    description: { type: "string", description: "Full product description" },
+                    comments: { type: ["string", "null"], description: "Per-item notes" },
+                    quantity: { type: "number", description: "Number of units" },
+                    unitPrice: { type: "number", description: "Unit price (0 for bundled items)" },
+                    totalPrice: { type: ["number", "null"], description: "Total price if shown" },
+                    isBundled: { type: "boolean", description: "True if item has no separate price" },
+                    leadTimeDays: { type: ["number", "null"], description: "Lead time in days" },
+                    unitOfMeasure: { type: "string", description: "Unit of measure (EA, m, etc.)" },
+                  },
+                  required: ["productCode", "description", "quantity", "unitPrice", "unitOfMeasure", "isBundled"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["supplierName", "supplierContact", "supplierEmail", "supplierPhone", "quoteNumber", "quoteDate", "validityDays", "deliveryNotes", "lineItems"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    let extracted: any;
+    try {
+      const content = extractionResult.choices[0]?.message?.content;
+      const textContent = typeof content === "string" ? content : (content as any)?.[0]?.text || "";
+      const cleaned = textContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      extracted = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error("[EmailExtract] Failed to parse LLM response:", parseError);
+      res.status(500).json({ error: "Failed to parse extracted data from text. Please try again." });
+      return;
+    }
+
+    if (!extracted.lineItems || !Array.isArray(extracted.lineItems) || extracted.lineItems.length === 0) {
+      res.status(422).json({
+        error: "No line items could be extracted from the provided text. Please check the text contains pricing information.",
+        supplierName: extracted.supplierName || null,
+      });
+      return;
+    }
+
+    // Sanitise numbers
+    const sanitiseNumber = (val: any): number => {
+      if (typeof val === "number") return val;
+      if (typeof val === "string") {
+        const cleaned = val.replace(/[\$AUD]/gi, "").replace(/(\d)\s+(\d)/g, "$1$2").replace(/,/g, "").trim();
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? 0 : num;
+      }
+      return 0;
+    };
+
+    // Auto-create or find the supplier
+    const supplierName = extracted.supplierName || "Unknown Supplier";
+    const supplierId = await getOrCreateSupplierByName(
+      user.id,
+      supplierName,
+      extracted.supplierContact || undefined,
+      extracted.supplierEmail || undefined,
+      extracted.supplierPhone || undefined
+    );
+
+    // Auto-add supplier to project tracking
+    try {
+      await addProjectSupplier(parseInt(projectId), supplierId);
+    } catch (e) {
+      console.warn("[EmailExtract] Could not auto-track supplier:", e);
+    }
+
+    // Create supplier quote record (no PDF URL for email quotes)
+    await createSupplierQuote(
+      parseInt(projectId),
+      supplierId,
+      extracted.quoteNumber || undefined,
+      extracted.quoteDate ? new Date(extracted.quoteDate) : undefined,
+      undefined, // no PDF URL
+      undefined, // quoteExpiry
+      extracted.validityDays || undefined,
+      extracted.deliveryNotes || undefined
+    );
+
+    // Get the inserted supplier quote
+    const allSqs = await getSupplierQuotesByProject(parseInt(projectId));
+    const supplierQuote = allSqs[allSqs.length - 1];
+
+    if (!supplierQuote) {
+      res.status(500).json({ error: "Failed to create supplier quote" });
+      return;
+    }
+
+    // Save extracted line items
+    const savedItems: any[] = [];
+    let itemIdx = 0;
+    for (const item of extracted.lineItems) {
+      itemIdx++;
+      const unitPrice = sanitiseNumber(item.unitPrice);
+      const totalPrice = item.totalPrice != null ? sanitiseNumber(item.totalPrice) : null;
+      const quantity = typeof item.quantity === "number" ? item.quantity : parseInt(item.quantity) || 0;
+      const isBundled = item.isBundled === true || (unitPrice === 0 && quantity > 0);
+
+      await createLineItem(
+        supplierQuote.id,
+        item.productCode || "MANUAL",
+        item.description || "",
+        quantity,
+        String(unitPrice),
+        itemIdx,
+        item.type || null,
+        item.unitOfMeasure || "EA",
+        item.leadTimeDays || undefined,
+        undefined, // markupPercent
+        item.comments || undefined,
+        totalPrice != null ? String(totalPrice) : undefined,
+        isBundled
+      );
+      savedItems.push({
+        type: item.type,
+        productCode: item.productCode,
+        description: item.description,
+        comments: item.comments,
+        quantity,
+        costPrice: String(unitPrice),
+        totalPrice: totalPrice != null ? String(totalPrice) : null,
+        isBundled,
+        leadTimeDays: item.leadTimeDays,
+        unitOfMeasure: item.unitOfMeasure,
+      });
+    }
+
+    res.json({
+      success: true,
+      supplierQuoteId: supplierQuote.id,
+      supplierName,
+      supplierId,
+      quoteNumber: extracted.quoteNumber,
+      quoteDate: extracted.quoteDate,
+      deliveryNotes: extracted.deliveryNotes,
+      extractedItems: savedItems,
+      itemCount: savedItems.length,
+    });
+  } catch (error) {
+    console.error("[EmailExtract] Error:", error);
+    res.status(500).json({ error: "Failed to extract quote from text. Please try again." });
+  }
+});
+
+// ============================================================
+// POST /api/add-manual-line-item
+// Adds a single manual line item to an existing supplier quote
+// ============================================================
+apiRouter.post("/api/add-manual-line-item", async (req: Request, res: Response) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { supplierQuoteId, type, productCode, description, quantity, costPrice, unitOfMeasure, leadTimeDays, comments, isBundled } = req.body;
+
+    if (!supplierQuoteId) {
+      res.status(400).json({ error: "Missing supplierQuoteId" });
+      return;
+    }
+    if (!description || description.trim().length === 0) {
+      res.status(400).json({ error: "Description is required" });
+      return;
+    }
+
+    const qty = typeof quantity === "number" ? quantity : parseInt(quantity) || 1;
+    const price = typeof costPrice === "number" ? costPrice : parseFloat(costPrice) || 0;
+    const bundled = isBundled === true || price === 0;
+
+    // Get current max item number for this supplier quote
+    const existingItems = await getLineItemsBySupplierQuote(supplierQuoteId);
+    const maxItemNumber = existingItems.reduce((max: number, item: any) => Math.max(max, item.itemNumber || 0), 0);
+
+    await createLineItem(
+      supplierQuoteId,
+      productCode || "MANUAL",
+      description.trim(),
+      qty,
+      String(price),
+      maxItemNumber + 1,
+      type || null,
+      unitOfMeasure || "EA",
+      leadTimeDays || undefined,
+      undefined, // markupPercent
+      comments || undefined,
+      undefined, // totalPrice
+      bundled
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[ManualLineItem] Error:", error);
+    res.status(500).json({ error: "Failed to add line item" });
+  }
+});
+
+// ============================================================
+// POST /api/create-manual-supplier-quote
+// Creates a new empty supplier quote for manual entry
+// ============================================================
+apiRouter.post("/api/create-manual-supplier-quote", async (req: Request, res: Response) => {
+  try {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { projectId, supplierName, quoteNumber } = req.body;
+
+    if (!projectId || !supplierName || supplierName.trim().length === 0) {
+      res.status(400).json({ error: "Missing projectId or supplierName" });
+      return;
+    }
+
+    // Auto-create or find the supplier
+    const supplierId = await getOrCreateSupplierByName(user.id, supplierName.trim());
+
+    // Auto-add supplier to project tracking
+    try {
+      await addProjectSupplier(parseInt(projectId), supplierId);
+    } catch (e) {
+      console.warn("[ManualQuote] Could not auto-track supplier:", e);
+    }
+
+    // Create supplier quote record (no PDF URL)
+    await createSupplierQuote(
+      parseInt(projectId),
+      supplierId,
+      quoteNumber || undefined,
+      new Date(),
+      undefined // no PDF URL
+    );
+
+    // Get the inserted supplier quote
+    const allSqs = await getSupplierQuotesByProject(parseInt(projectId));
+    const supplierQuote = allSqs[allSqs.length - 1];
+
+    res.json({
+      success: true,
+      supplierQuoteId: supplierQuote?.id,
+      supplierId,
+      supplierName: supplierName.trim(),
+    });
+  } catch (error) {
+    console.error("[ManualQuote] Error:", error);
+    res.status(500).json({ error: "Failed to create supplier quote" });
+  }
+});
+
+// ============================================================
 // PDF Generation Function — Modern Professional Design
 // ============================================================
 interface QuotePDFData {

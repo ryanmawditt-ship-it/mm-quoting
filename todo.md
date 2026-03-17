@@ -271,3 +271,6 @@
 - [x] Red highlight on empty Type fields to guide user
 - [x] Type is editable in both Step 1 (selection table) and Step 2 (review/reorder table)
 - [x] Add visual separation between type groups in customer quote PDF (top/bottom accent borders, left accent bar on grouped items, spacing between groups)
+- [x] Fix analytics: quote count now shows 4 (latest version per project, not all versions)
+- [x] Fix analytics: projects won tracking now uses project status instead of quote status
+- [x] Fix analytics: all three functions (overview, byCustomer, timeline) now use latest-quote-per-project and project-status-based won/lost

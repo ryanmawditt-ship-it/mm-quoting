@@ -1,4 +1,4 @@
-import { eq, inArray, and, ne, sql, count, sum } from "drizzle-orm";
+import { eq, inArray, and, ne, sql, count, sum, desc, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, companySettings, InsertCompanySettings, salespersons, suppliers, projects, supplierQuotes, lineItems, customerQuotes, customerQuoteLineItems, projectSuppliers } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -571,9 +571,13 @@ export async function getAnalyticsOverview() {
   const db = await getDb();
   if (!db) return null;
 
-  // Total projects (excluding archived)
-  const totalProjectsResult = await db.select({ count: count() }).from(projects).where(ne(projects.status, "archived"));
-  const totalProjects = totalProjectsResult[0]?.count ?? 0;
+  // Get all non-archived projects
+  const allActiveProjects = await db.select({
+    id: projects.id,
+    status: projects.status,
+  }).from(projects).where(ne(projects.status, "archived"));
+  const totalProjects = allActiveProjects.length;
+  const activeIds = allActiveProjects.map(p => p.id);
 
   // Projects by status
   const projectsByStatus = await db.select({
@@ -581,62 +585,81 @@ export async function getAnalyticsOverview() {
     count: count(),
   }).from(projects).where(ne(projects.status, "archived")).groupBy(projects.status);
 
-  // Get IDs of non-archived projects to filter quotes
-  const activeProjectIds = await db.select({ id: projects.id }).from(projects).where(ne(projects.status, "archived"));
-  const activeIds = activeProjectIds.map(p => p.id);
-
-  // Total customer quotes (only from non-archived projects)
-  let totalQuotes = 0;
-  let quotesByStatus: { status: string; count: number }[] = [];
-  let allActiveQuoteIds: number[] = [];
-
-  if (activeIds.length > 0) {
-    const totalQuotesResult = await db.select({ count: count() }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds));
-    totalQuotes = totalQuotesResult[0]?.count ?? 0;
-
-    // Customer quotes by status
-    quotesByStatus = await db.select({
-      status: customerQuotes.status,
-      count: count(),
-    }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds)).groupBy(customerQuotes.status);
-
-    // Get all active quote IDs for line item calculations
-    const activeQuotes = await db.select({ id: customerQuotes.id }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds));
-    allActiveQuoteIds = activeQuotes.map(q => q.id);
+  // Build a map of project status for won/lost determination
+  const projectStatusMap = new Map<number, string>();
+  for (const p of allActiveProjects) {
+    projectStatusMap.set(p.id, p.status);
   }
 
-  // Total revenue from won quotes (only from non-archived projects)
-  let wonIds: number[] = [];
-  if (activeIds.length > 0) {
-    const wonQuoteIds = await db.select({ id: customerQuotes.id })
-      .from(customerQuotes)
-      .where(and(eq(customerQuotes.status, "won"), inArray(customerQuotes.projectId, activeIds)));
-    wonIds = wonQuoteIds.map(q => q.id);
-  }
+  // Get all customer quotes from non-archived projects
+  const allQuotes = activeIds.length > 0
+    ? await db.select({
+        id: customerQuotes.id,
+        projectId: customerQuotes.projectId,
+        quoteNumber: customerQuotes.quoteNumber,
+        versionNumber: customerQuotes.versionNumber,
+        status: customerQuotes.status,
+      }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds))
+    : [];
 
+  // Find only the latest version per project (highest versionNumber per projectId)
+  const latestQuotePerProject = new Map<number, typeof allQuotes[0]>();
+  for (const q of allQuotes) {
+    const existing = latestQuotePerProject.get(q.projectId);
+    if (!existing || q.versionNumber > existing.versionNumber) {
+      latestQuotePerProject.set(q.projectId, q);
+    }
+  }
+  const latestQuotes = Array.from(latestQuotePerProject.values());
+  const totalQuotes = latestQuotes.length;
+
+  // Quote status based on PROJECT status (won/lost/sent/pending/draft)
+  const quotesByStatus: { status: string; count: number }[] = [];
+  const statusCounts = new Map<string, number>();
+  for (const q of latestQuotes) {
+    const projectStatus = projectStatusMap.get(q.projectId) ?? q.status;
+    // Map project status to quote-relevant status
+    const displayStatus = projectStatus === 'won' ? 'won'
+      : projectStatus === 'lost' ? 'lost'
+      : projectStatus === 'sent' ? 'sent'
+      : q.status; // fallback to quote's own status for pending/draft projects
+    statusCounts.set(displayStatus, (statusCounts.get(displayStatus) ?? 0) + 1);
+  }
+  Array.from(statusCounts.entries()).forEach(([status, cnt]) => {
+    quotesByStatus.push({ status, count: cnt });
+  });
+
+  // Get IDs of latest quotes for value calculations
+  const latestQuoteIds = latestQuotes.map(q => q.id);
+
+  // Won project IDs and their latest quote IDs
+  const wonProjectIds = allActiveProjects.filter(p => p.status === 'won').map(p => p.id);
+  const wonQuoteIds = latestQuotes.filter(q => wonProjectIds.includes(q.projectId)).map(q => q.id);
+
+  // Total revenue from won projects (latest quote version)
   let totalWonRevenue = 0;
-  if (wonIds.length > 0) {
+  if (wonQuoteIds.length > 0) {
     const revenueResult = await db.select({
       total: sql<string>`SUM(CAST(${customerQuoteLineItems.sellPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
-    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, wonIds));
+    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, wonQuoteIds));
     totalWonRevenue = parseFloat(revenueResult[0]?.total ?? '0');
   }
 
-  // Total value of all quotes (only from non-archived projects)
+  // Total value of all latest quotes (from non-archived projects)
   let totalQuotedValue = 0;
-  if (allActiveQuoteIds.length > 0) {
+  if (latestQuoteIds.length > 0) {
     const quotedResult = await db.select({
       total: sql<string>`SUM(CAST(${customerQuoteLineItems.sellPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
-    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, allActiveQuoteIds));
+    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, latestQuoteIds));
     totalQuotedValue = parseFloat(quotedResult[0]?.total ?? '0');
   }
 
-  // Total cost value (for margin calculation)
+  // Total cost value (for margin calculation on won projects)
   let totalCostValue = 0;
-  if (wonIds.length > 0) {
+  if (wonQuoteIds.length > 0) {
     const costResult = await db.select({
       total: sql<string>`SUM(CAST(${customerQuoteLineItems.costPrice} AS DECIMAL(12,4)) * ${customerQuoteLineItems.quantity})`
-    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, wonIds));
+    }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, wonQuoteIds));
     totalCostValue = parseFloat(costResult[0]?.total ?? '0');
   }
 
@@ -656,15 +679,12 @@ export async function getAnalyticsByCustomer() {
   const db = await getDb();
   if (!db) return [];
 
-  // Get all non-archived projects with their customer names
+  // Get all non-archived projects with their customer names and statuses
   const allProjects = await db.select({
     id: projects.id,
     customerName: projects.customerName,
     status: projects.status,
   }).from(projects).where(ne(projects.status, "archived"));
-
-  // Build a set of active project IDs for filtering
-  const activeProjectIdSet = new Set(allProjects.map(p => p.id));
 
   // Get customer quotes only from non-archived projects
   const activeProjectIds = allProjects.map(p => p.id);
@@ -672,19 +692,30 @@ export async function getAnalyticsByCustomer() {
     ? await db.select({
         id: customerQuotes.id,
         projectId: customerQuotes.projectId,
+        versionNumber: customerQuotes.versionNumber,
         status: customerQuotes.status,
       }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeProjectIds))
     : [];
 
-  // Get line items only for quotes from non-archived projects
-  const activeQuoteIds = allCustomerQuotes.map(q => q.id);
-  const allLineItemsData = activeQuoteIds.length > 0
+  // Find only the latest version per project
+  const latestQuotePerProject = new Map<number, typeof allCustomerQuotes[0]>();
+  for (const q of allCustomerQuotes) {
+    const existing = latestQuotePerProject.get(q.projectId);
+    if (!existing || q.versionNumber > existing.versionNumber) {
+      latestQuotePerProject.set(q.projectId, q);
+    }
+  }
+  const latestQuotes = Array.from(latestQuotePerProject.values());
+
+  // Get line items only for latest quotes
+  const latestQuoteIds = latestQuotes.map(q => q.id);
+  const allLineItemsData = latestQuoteIds.length > 0
     ? await db.select({
         customerQuoteId: customerQuoteLineItems.customerQuoteId,
         sellPrice: customerQuoteLineItems.sellPrice,
         costPrice: customerQuoteLineItems.costPrice,
         quantity: customerQuoteLineItems.quantity,
-      }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, activeQuoteIds))
+      }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, latestQuoteIds))
     : [];
 
   // Build a map of quoteId -> total sell value and cost value
@@ -696,9 +727,11 @@ export async function getAnalyticsByCustomer() {
     quoteValues.set(li.customerQuoteId, existing);
   }
 
-  // Build a map of projectId -> customerName
+  // Build project status and customer name maps
+  const projectStatusMap = new Map<number, string>();
   const projectCustomerMap = new Map<number, string>();
   for (const p of allProjects) {
+    projectStatusMap.set(p.id, p.status);
     projectCustomerMap.set(p.id, p.customerName);
   }
 
@@ -732,8 +765,8 @@ export async function getAnalyticsByCustomer() {
     customerStats.get(name)!.totalProjects++;
   }
 
-  // Count quotes per customer
-  for (const q of allCustomerQuotes) {
+  // Count latest quotes per customer, using PROJECT status for won/lost
+  for (const q of latestQuotes) {
     const customerName = projectCustomerMap.get(q.projectId);
     if (!customerName) continue;
     if (!customerStats.has(customerName)) {
@@ -752,11 +785,13 @@ export async function getAnalyticsByCustomer() {
     stats.totalQuotes++;
     const values = quoteValues.get(q.id) ?? { sell: 0, cost: 0 };
     stats.totalQuotedValue += values.sell;
-    if (q.status === 'won' || q.status === 'accepted') {
+    // Use project status for won/lost determination
+    const projectStatus = projectStatusMap.get(q.projectId) ?? '';
+    if (projectStatus === 'won') {
       stats.wonQuotes++;
       stats.totalWonValue += values.sell;
       stats.totalCostValue += values.cost;
-    } else if (q.status === 'lost') {
+    } else if (projectStatus === 'lost') {
       stats.lostQuotes++;
     }
   }
@@ -768,28 +803,43 @@ export async function getAnalyticsTimeline() {
   const db = await getDb();
   if (!db) return [];
 
-  // Get non-archived project IDs
-  const activeProjectIds = await db.select({ id: projects.id }).from(projects).where(ne(projects.status, "archived"));
-  const activeIds = activeProjectIds.map(p => p.id);
+  // Get non-archived projects with their statuses
+  const activeProjects = await db.select({ id: projects.id, status: projects.status }).from(projects).where(ne(projects.status, "archived"));
+  const activeIds = activeProjects.map(p => p.id);
+  const projectStatusMap = new Map<number, string>();
+  for (const p of activeProjects) {
+    projectStatusMap.set(p.id, p.status);
+  }
 
   // Get customer quotes only from non-archived projects
-  const quotes = activeIds.length > 0
+  const allQuotes = activeIds.length > 0
     ? await db.select({
         id: customerQuotes.id,
         status: customerQuotes.status,
+        versionNumber: customerQuotes.versionNumber,
         createdAt: customerQuotes.createdAt,
         projectId: customerQuotes.projectId,
       }).from(customerQuotes).where(inArray(customerQuotes.projectId, activeIds)).orderBy(customerQuotes.createdAt)
     : [];
 
-  // Get line item totals per quote (only active quotes)
-  const activeQuoteIds = quotes.map(q => q.id);
-  const allLineItemsData = activeQuoteIds.length > 0
+  // Find only the latest version per project
+  const latestQuotePerProject = new Map<number, typeof allQuotes[0]>();
+  for (const q of allQuotes) {
+    const existing = latestQuotePerProject.get(q.projectId);
+    if (!existing || q.versionNumber > existing.versionNumber) {
+      latestQuotePerProject.set(q.projectId, q);
+    }
+  }
+  const latestQuotes = Array.from(latestQuotePerProject.values());
+
+  // Get line item totals per latest quote
+  const latestQuoteIds = latestQuotes.map(q => q.id);
+  const allLineItemsData = latestQuoteIds.length > 0
     ? await db.select({
         customerQuoteId: customerQuoteLineItems.customerQuoteId,
         sellPrice: customerQuoteLineItems.sellPrice,
         quantity: customerQuoteLineItems.quantity,
-      }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, activeQuoteIds))
+      }).from(customerQuoteLineItems).where(inArray(customerQuoteLineItems.customerQuoteId, latestQuoteIds))
     : [];
 
   const quoteValues = new Map<number, number>();
@@ -801,7 +851,7 @@ export async function getAnalyticsTimeline() {
   // Group by month
   const monthlyData = new Map<string, { month: string; quotesCreated: number; quotesWon: number; totalValue: number; wonValue: number }>();
 
-  for (const q of quotes) {
+  for (const q of latestQuotes) {
     const date = new Date(q.createdAt);
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     if (!monthlyData.has(monthKey)) {
@@ -811,7 +861,9 @@ export async function getAnalyticsTimeline() {
     data.quotesCreated++;
     const value = quoteValues.get(q.id) ?? 0;
     data.totalValue += value;
-    if (q.status === 'won' || q.status === 'accepted') {
+    // Use project status for won determination
+    const projectStatus = projectStatusMap.get(q.projectId) ?? '';
+    if (projectStatus === 'won') {
       data.quotesWon++;
       data.wonValue += value;
     }

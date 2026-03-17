@@ -1567,6 +1567,9 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
         }
       };
 
+      // Track whether we're inside a grouped section (for left accent bar)
+      let insideGroup = false;
+
       // Draw a single item row
       const drawItemRow = (item: typeof data.lineItems[0], lineNum: number) => {
         const lineExcl = item.sellPrice * item.quantity;
@@ -1586,6 +1589,13 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
           doc.restore();
         }
         rowCounter++;
+
+        // Left accent bar for grouped items
+        if (insideGroup) {
+          doc.save();
+          doc.rect(ML, tableY, 3, rowH).fillColor(C.accent).opacity(0.35).fill();
+          doc.restore();
+        }
 
         doc.moveTo(ML, tableY + rowH).lineTo(PW - MR, tableY + rowH).strokeColor(C.border).lineWidth(0.3).stroke();
 
@@ -1637,10 +1647,19 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
       // for consecutive runs of 3+ items sharing the same type code.
       let lineNum = 1;
 
+      let isFirstGroup = true;
+
       for (const group of consecutiveGroups) {
         const showGroupHeader = hasAnyGroupHeaders && group.type !== "" && group.items.length >= 3;
 
         if (showGroupHeader) {
+          // Add spacing between groups (not before the very first group)
+          if (!isFirstGroup) {
+            const spacerH = 10;
+            ensurePageSpace(spacerH);
+            tableY += spacerH;
+          }
+
           // Draw type group header row — total price only, no qty
           const groupHeaderH = 20;
           ensurePageSpace(groupHeaderH);
@@ -1650,10 +1669,13 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
           doc.rect(ML, tableY, CW, groupHeaderH).fillColor("#eef2ff").fill();
           doc.restore();
 
-          // Left accent bar
+          // Left accent bar on header
           doc.save();
           doc.rect(ML, tableY, 3, groupHeaderH).fillColor(C.accent).fill();
           doc.restore();
+
+          // Top border for group
+          doc.moveTo(ML, tableY).lineTo(PW - MR, tableY).strokeColor(C.accent).lineWidth(0.8).stroke();
 
           doc.moveTo(ML, tableY + groupHeaderH).lineTo(PW - MR, tableY + groupHeaderH).strokeColor(C.border).lineWidth(0.5).stroke();
 
@@ -1670,14 +1692,35 @@ async function generateQuotePDF(data: QuotePDFData): Promise<Buffer> {
           const totalColX = ML + 8 + COL.num.w + COL.type.w + COL.code.w + COL.desc.w + COL.lt.w + COL.qty.w + COL.uom.w + COL.price.w;
           doc.text(`$${fmtMoney(group.groupTotal)}`, totalColX, ghTextY + 3, { width: COL.total.w, align: COL.total.align });
 
+          const groupStartY = tableY; // Remember where the group started
           tableY += groupHeaderH;
           rowCounter = 0; // Reset alternating for each group
+
+          // Draw individual items in this group
+          insideGroup = true;
+          for (const item of group.items) {
+            drawItemRow(item, lineNum++);
+          }
+          insideGroup = false;
+
+          // Draw bottom border to close the group
+          doc.moveTo(ML, tableY).lineTo(PW - MR, tableY).strokeColor(C.accent).lineWidth(0.8).stroke();
+
+        } else {
+          // Standalone items (no group) — add small spacing if after a grouped section
+          if (!isFirstGroup && consecutiveGroups[consecutiveGroups.indexOf(group) - 1]?.type !== "" && consecutiveGroups[consecutiveGroups.indexOf(group) - 1]?.items.length >= 3) {
+            const spacerH = 8;
+            ensurePageSpace(spacerH);
+            tableY += spacerH;
+          }
+
+          // Draw individual items (standalone)
+          for (const item of group.items) {
+            drawItemRow(item, lineNum++);
+          }
         }
 
-        // Draw individual items in this group (or standalone items)
-        for (const item of group.items) {
-          drawItemRow(item, lineNum++);
-        }
+        isFirstGroup = false;
       }
 
       // ================================================================

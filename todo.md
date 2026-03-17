@@ -270,3 +270,4 @@
 - [x] Ensure every line must have a Type before generating customer quote (validation with error message)
 - [x] Red highlight on empty Type fields to guide user
 - [x] Type is editable in both Step 1 (selection table) and Step 2 (review/reorder table)
+- [x] Add visual separation between type groups in customer quote PDF (top/bottom accent borders, left accent bar on grouped items, spacing between groups)

@@ -892,7 +892,7 @@ apiRouter.post("/api/extract-email-quote", async (req: Request, res: Response) =
       return;
     }
 
-    const { projectId, text: emailText } = req.body;
+    const { projectId, text: emailText, supplierName: providedSupplierName } = req.body;
 
     if (!projectId || !emailText || typeof emailText !== "string" || emailText.trim().length < 10) {
       res.status(400).json({ error: "Missing projectId or text (minimum 10 characters)" });
@@ -1008,8 +1008,10 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
       return 0;
     };
 
-    // Auto-create or find the supplier
-    const supplierName = extracted.supplierName || "Unknown Supplier";
+    // Use the user-provided supplier name if given, otherwise fall back to AI-detected
+    const supplierName = (providedSupplierName && typeof providedSupplierName === "string" && providedSupplierName.trim())
+      ? providedSupplierName.trim()
+      : (extracted.supplierName || "Unknown Supplier");
     const supplierId = await getOrCreateSupplierByName(
       user.id,
       supplierName,

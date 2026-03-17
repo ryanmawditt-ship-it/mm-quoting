@@ -264,3 +264,9 @@
 - [x] Frontend: "Paste Email Quote" card with text area and AI extraction
 - [x] Frontend: "Manual Entry" card to create supplier quote and add items by hand
 - [x] Fix test cleanup: tests now clean up after themselves (no more test data pollution in production DB)
+- [x] Add supplier name input field to Paste Email Quote section (required field)
+- [x] Pass supplier name to backend when extracting email quotes (overrides AI-detected name)
+- [x] Add editable Type field to every line item in the customer quote builder (Step 1 and Step 2)
+- [x] Ensure every line must have a Type before generating customer quote (validation with error message)
+- [x] Red highlight on empty Type fields to guide user
+- [x] Type is editable in both Step 1 (selection table) and Step 2 (review/reorder table)

@@ -203,6 +203,7 @@ export default function ProjectDetailPage() {
   // Email paste & manual quote state
   const [showEmailPaste, setShowEmailPaste] = useState(false);
   const [emailText, setEmailText] = useState("");
+  const [emailSupplierName, setEmailSupplierName] = useState("");
   const [extractingEmail, setExtractingEmail] = useState(false);
   const [showManualQuote, setShowManualQuote] = useState(false);
   const [manualSupplierName, setManualSupplierName] = useState("");
@@ -684,8 +685,17 @@ export default function ProjectDetailPage() {
                   Paste Email / Text Quote
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Paste the email body or any text containing supplier pricing. AI will extract the supplier name, line items, quantities, and prices automatically.
+                  Enter the supplier name and paste the email body or text containing pricing. AI will extract line items, quantities, and prices.
                 </p>
+                <div>
+                  <Label className="text-xs">Supplier Name *</Label>
+                  <Input
+                    placeholder="e.g. Lumen8 Lighting, Raylinc, Clevertronics..."
+                    value={emailSupplierName}
+                    onChange={(e) => setEmailSupplierName(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
                 <Textarea
                   placeholder={`Paste your email or quote text here...\n\nExample:\nHi,\n\nPlease find below our pricing for the Bazaar project:\n\nType WL01 - Solar Wall Light x 6 @ $477.00 each\nType WL02 - Harbour Wall Light x 8 @ $510.00 each\nFreight - $1,000.00\n\nRegards,\nJohn Smith\nLumen8 Lighting`}
                   value={emailText}
@@ -697,20 +707,20 @@ export default function ProjectDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => { setShowEmailPaste(false); setEmailText(""); }}
+                    onClick={() => { setShowEmailPaste(false); setEmailText(""); setEmailSupplierName(""); }}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    disabled={extractingEmail || emailText.trim().length < 10}
+                    disabled={extractingEmail || emailText.trim().length < 10 || !emailSupplierName.trim()}
                     onClick={async () => {
                       setExtractingEmail(true);
                       try {
                         const response = await fetch("/api/extract-email-quote", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ projectId, text: emailText }),
+                          body: JSON.stringify({ projectId, text: emailText, supplierName: emailSupplierName.trim() }),
                         });
                         if (!response.ok) {
                           const errData = await response.json().catch(() => ({}));
@@ -720,6 +730,7 @@ export default function ProjectDetailPage() {
                         toast.success(`${result.itemCount} line items extracted from ${result.supplierName || "email"}`);
                         setShowEmailPaste(false);
                         setEmailText("");
+                        setEmailSupplierName("");
                         utils.supplierQuotes.getByProject.invalidate({ projectId });
                         utils.suppliers.list.invalidate();
                         utils.projectSuppliers.list.invalidate({ projectId });
@@ -1708,7 +1719,7 @@ function SortableRow({ id, lineNum, itemType, description, quantity, sellTotal }
   );
 }
 
-function ReviewRow({ lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onRemove, onMoveToTop, onMoveUp, onMoveDown, onMoveToBottom, onSequenceChange, totalItems, customerScheduleQty }: {
+function ReviewRow({ lineNum, itemType, description, productCode, quantity, costPrice, margin, sellPrice, lineTotal, onQuantityChange, onMarginChange, onTypeChange, onRemove, onMoveToTop, onMoveUp, onMoveDown, onMoveToBottom, onSequenceChange, totalItems, customerScheduleQty }: {
   lineNum: number;
   itemType: string;
   description: string;
@@ -1720,6 +1731,7 @@ function ReviewRow({ lineNum, itemType, description, productCode, quantity, cost
   lineTotal: number;
   onQuantityChange: (qty: number) => void;
   onMarginChange: (margin: number) => void;
+  onTypeChange: (type: string) => void;
   onRemove: () => void;
   onMoveToTop: () => void;
   onMoveUp: () => void;
@@ -1760,7 +1772,14 @@ function ReviewRow({ lineNum, itemType, description, productCode, quantity, cost
         </div>
       </td>
       <td className="p-2">
-        {itemType && <Badge variant="outline" className="text-xs">{itemType}</Badge>}
+        <Input
+          type="text"
+          className={`w-24 h-7 text-xs font-medium ${!itemType || !itemType.trim() ? "border-red-400 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-400" : ""}`}
+          value={itemType}
+          onChange={(e) => onTypeChange(e.target.value)}
+          placeholder="e.g. WL01"
+          title="Type code (required)"
+        />
       </td>
       <td className="p-2 text-xs max-w-[250px]">
         <div className="truncate" title={description}>{description}</div>
@@ -1874,6 +1893,7 @@ function QuoteBuilderTable({
   toggleItem,
   updateItemMargin,
   updateItemQuantity,
+  updateItemType,
   saveMarginToDb,
   setSelectedItems,
   globalMargin,
@@ -1883,6 +1903,7 @@ function QuoteBuilderTable({
   toggleItem: (itemId: number, item: any, supplier: any) => void;
   updateItemMargin: (itemId: number, margin: number) => void;
   updateItemQuantity: (itemId: number, quantity: number) => void;
+  updateItemType: (itemId: number, itemType: string) => void;
   saveMarginToDb: (itemId: number, margin: number) => void;
   setSelectedItems: React.Dispatch<React.SetStateAction<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>>;
   globalMargin: number;
@@ -1997,7 +2018,21 @@ function QuoteBuilderTable({
           />
         </td>
         {!isGrouped && <td className="p-3 text-xs">{supplier?.name || "Unknown"}</td>}
-        {!isGrouped && <td className="p-3 text-xs font-medium">{item.type || "-"}</td>}
+        {!isGrouped && (
+          <td className="p-3">
+            {isSelected ? (
+              <Input
+                type="text"
+                className={`w-20 h-7 text-xs font-medium ${!data?.itemType?.trim() ? "border-red-400 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-400" : ""}`}
+                value={data?.itemType || ""}
+                onChange={(e) => updateItemType(item.id, e.target.value)}
+                placeholder="Type"
+              />
+            ) : (
+              <span className="text-xs font-medium">{item.type || "-"}</span>
+            )}
+          </td>
+        )}
         {isGrouped && <td className="p-3 text-xs text-muted-foreground">{item.productCode}</td>}
         <td className={`p-3 ${isGrouped ? "" : "font-mono"} text-xs`}>{isGrouped ? item.description : item.productCode}</td>
         <td className="p-3 text-xs max-w-[200px] truncate">
@@ -2413,6 +2448,16 @@ function QuoteBuilder({
     setOrderedItemIds([]);
   };
 
+  // Update type for a selected item
+  const updateItemType = (itemId: number, itemType: string) => {
+    const newSelected = new Map(selectedItems);
+    const existing = newSelected.get(itemId);
+    if (existing) {
+      newSelected.set(itemId, { ...existing, itemType });
+    }
+    setSelectedItems(newSelected);
+  };
+
   // Update quantity for a selected item
   const updateItemQuantity = (itemId: number, quantity: number) => {
     const newSelected = new Map(selectedItems);
@@ -2664,6 +2709,19 @@ function QuoteBuilder({
   const handleGenerate = async () => {
     if (selectedItems.size === 0) {
       toast.error("Please select at least one line item");
+      return;
+    }
+
+    // Validate every line has a type
+    const missingTypes: string[] = [];
+    selectedItems.forEach((data, id) => {
+      if (!data.itemType || !data.itemType.trim()) {
+        const lineItem = allLineItems.find(({ item }) => item.id === id);
+        missingTypes.push(lineItem?.item?.description?.substring(0, 40) || `Item #${id}`);
+      }
+    });
+    if (missingTypes.length > 0) {
+      toast.error(`Every line must have a Type. Missing on: ${missingTypes.slice(0, 3).join(", ")}${missingTypes.length > 3 ? ` and ${missingTypes.length - 3} more` : ""}`);
       return;
     }
 
@@ -2975,6 +3033,7 @@ function QuoteBuilder({
               toggleItem={toggleItem}
               updateItemMargin={updateItemMargin}
               updateItemQuantity={updateItemQuantity}
+              updateItemType={updateItemType}
               saveMarginToDb={saveMarginToDb}
               setSelectedItems={setSelectedItems}
               globalMargin={globalMargin}
@@ -3155,6 +3214,7 @@ function QuoteBuilder({
                         totalItems={orderedSelectedItems.length}
                         onQuantityChange={(qty: number) => updateItemQuantity(itemId, qty)}
                         onMarginChange={(margin: number) => updateItemMargin(itemId, margin)}
+                        onTypeChange={(type: string) => updateItemType(itemId, type)}
                         onRemove={() => {
                           const newSelected = new Map(selectedItems);
                           newSelected.delete(itemId);

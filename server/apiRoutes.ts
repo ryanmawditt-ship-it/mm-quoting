@@ -117,6 +117,22 @@ Luxson TYPE headers often contain IMPORTANT descriptive information below the TY
 
 You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text that appears under a TYPE header but is NOT a priced line item. This text will be appended to the description of items under that type.
 
+**LUMEN8 ARCHITECTURAL LIGHTING (PROGETTO ONE PTY LTD):**
+- Columns: QTY | ITEM CODE | DESCRIPTION | PRICE ex GST | TOTAL ex GST
+- Items grouped under TYPE CODE headers (e.g., "TYPE CODE    WL01    Low Level Ceiling area", "TYPE CODE    SL04    Substation External")
+- The TYPE CODE header text (e.g., "WL01", "WL05", "SL04", "PD01", "L4") should be used as the "type" field for items under it
+- CRITICAL PRICE ALIGNMENT RULE: Each row's price belongs ONLY to that row. If a row has BLANK/EMPTY price columns (no PRICE ex GST and no TOTAL ex GST values), that item is bundled — set unitPrice=0 and isBundled=true. NEVER shift or reassign a price from one row to another.
+- Common item patterns within a type section:
+  * Main fixture (e.g., L8 BESPOKE-WAVERWLB, L8 BESPOKE-HARBOUR) — always has a price
+  * LED modules (e.g., SOMODL099027PRO60L "Solis Low Profile LED module") — may or may NOT have a price. Check the PRICE ex GST column on THAT specific row. If blank, it is bundled (unitPrice=0, isBundled=true)
+  * Bronze pipes (e.g., L8 BESPOKE "Bronze pipe with ceiling canopy...") — often HAS a price (commonly $135.00). The price is on the BRONZE PIPE row, NOT on adjacent rows
+  * Drivers (e.g., AT87500921 "Constant Current 20W...") — may or may NOT have a price (commonly $32.00 when priced). Check the PRICE ex GST column on THAT specific row
+  * Shades (e.g., "Anodic Bronze Matte Shade for Mimante L") — may or may NOT have a price. If blank, it is bundled
+- CRITICAL: Do NOT confuse which row has the price. Look at the PRICE ex GST and TOTAL ex GST columns for EACH individual row independently. A row with values like "$135.00" and "$810.00" in the price columns is a PRICED item. A row with BLANK price columns is BUNDLED.
+- Lead time: typically 12-16 weeks from order (84-112 days). Use 112 days.
+- Freight is a separate line item at the end
+- Validity: check quote terms
+
 **CLEVERTRONICS:**
 - Columns: Type Number | Product Code | Item Description | Comments | Qty | Unit Price | Extended Price
 - "Type Number" contains fixture type codes like 2S, 1E, 2E, 3E/4E, 5E, 6E
@@ -133,6 +149,7 @@ You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text t
 4. For numbers: handle comma-separated (2,950.00), space-separated (5 393.29), and plain formats. Strip currency symbols ($, AUD). Always return clean decimal numbers.
 5. If an item has a "Total" or "Extended Price" but no unit price, calculate: unitPrice = total / quantity. If quantity is 0, use the total as unitPrice.
 6. Items with no price at all (bundled accessories) should have unitPrice=0 and isBundled=true
+6a. CRITICAL PRICE ALIGNMENT: Each price value belongs ONLY to the row where it appears in the PDF. When multiple items are listed under a type section, examine each row's price columns INDEPENDENTLY. Do NOT shift prices between rows. If row A has blank price columns and row B below it has $135.00, then row A is bundled (unitPrice=0) and row B costs $135.00. Never assign row B's price to row A.
 7. Lead times: check per-item columns, general notes, footer, and T&Cs. Convert weeks to days (1 week = 7 days). For ranges like "4-6 weeks", use the higher number (42). "Ex-stock" or "in stock" = 0 days.
 8. Quote validity: extract explicit expiry dates, or note the validity period in days (30, 60, 90 days)
 9. Freight/delivery items are real line items — extract them with type="FREIGHT"

@@ -253,3 +253,7 @@
 - [x] Clean up duplicate salespersons (53 test John Smiths removed)
 - [x] Archive test suppliers (TrackSup-*, Test Supplier No Markup) and duplicate Everlite/Luxson entries
 - [x] Fix company settings with correct MM Albion details (address, phone, fax, email)
+- [x] Fix AI extraction price misalignment: prices assigned to wrong line items when no-price items sit between priced items (e.g., Lumen8 WL05 type — bronze pipe price wrongly assigned to LED module)
+- [x] Add Lumen8 Architectural Lighting format instructions to AI extraction prompt
+- [x] Fix existing Lumen8 data: WL02, WL05 LED modules now bundled, bronze pipes now priced; SL04, SL05 shades now bundled, drivers now priced
+- [x] Add general CRITICAL PRICE ALIGNMENT rule to prevent price shifting across rows for all suppliers

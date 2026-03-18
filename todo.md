@@ -274,3 +274,6 @@
 - [x] Fix analytics: quote count now shows 4 (latest version per project, not all versions)
 - [x] Fix analytics: projects won tracking now uses project status instead of quote status
 - [x] Fix analytics: all three functions (overview, byCustomer, timeline) now use latest-quote-per-project and project-status-based won/lost
+- [x] Fix Raylinc track bundling: S1/D-6M, S1/D-10M etc. are track systems where accessories following the main track item should inherit parent track type
+- [x] Update AI extraction prompt with Raylinc track system bundling rules (detailed example included)
+- [x] Fix existing Raylinc data in Warner Tavern project: 5 accessories → S1/D-6M, 7 accessories → S1/D-10M, 12 customer quote items updated

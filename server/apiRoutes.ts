@@ -86,12 +86,33 @@ You will encounter quotes from various Australian electrical suppliers. Here are
 
 **RAYLINC AGENCIES PTY LTD:**
 - Columns: Product Code | Type | Description | Quantity | Price Ex GST | Total Ex GST
-- "Type" column contains area/section codes like PL1, 1S, 2S — these identify which area of the project the item belongs to
-- CRITICAL: Some items have NO unit price shown (e.g., poles, powdercoat, foundation cages). These are BUNDLED items included in the price of the main luminaire. Extract them with unitPrice=0 and set isBundled=true
+- "Type" column contains area/section codes like PL1, 1S, 2S, D1, D2/D, S1/D, etc. — these identify which area of the project the item belongs to
+- CRITICAL: Some items have NO unit price shown (e.g., poles, powdercoat, foundation cages, track accessories). These are BUNDLED items included in the price of the main item. Extract them with unitPrice=0 and set isBundled=true
 - Page 1 often contains **QUOTE_NOTES** and **NOTE** sections — these are NOT line items, do NOT extract them as items
-- Actual product line items start with a product code like "108-1554", "STM-RP-5.0-160-90-PC", "FC-4M20-233X1.0-K", "FREIGHT"
+- Actual product line items start with a product code like "108-1554", "STM-RP-5.0-160-90-PC", "FC-4M20-233X1.0-K", "TRACK-UNIOS", "FREIGHT"
 - Freight is always a separate line item
 - Validity: 30 days (stated in notes)
+
+**RAYLINC TRACK SYSTEM BUNDLING (CRITICAL):**
+Raylinc quotes often include TRACK RUNS as a system. The pattern is:
+1. A main TRACK item with a specific type like "S1/D-6M" or "S1/D-10M" (indicating track length), with product code like "TRACK-UNIOS" and a price (e.g., $449.40 for 6M, $756.24 for 10M)
+2. Followed by several ACCESSORY items (track sections, joiners, live ends, end caps) that have the BASE type "S1/D" and NO price — these are BUNDLED components of the track run
+
+CRITICAL RULE: When you see a track run header item with type like "S1/D-6M" or "S1/D-10M" followed by bundled accessories with the base type "S1/D", you MUST assign the PARENT track type to ALL accessories that belong to that track run. Specifically:
+- If accessories appear between "S1/D-6M" (the 6M track) and "S1/D-10M" (the 10M track), those accessories belong to the 6M track → set their type to "S1/D-6M"
+- If accessories appear after "S1/D-10M" and before the next different type section, those accessories belong to the 10M track → set their type to "S1/D-10M"
+- This applies to ANY track length variant (3M, 4M, 6M, 8M, 10M, etc.)
+- The tracklight fitting itself (e.g., AXIS 97+ TRACKLIGHT with type "S1/D") is a SEPARATE priced item and should keep its own type "S1/D" — it is NOT part of the track run bundle
+
+Example: If the PDF shows:
+  TRACK-UNIOS | S1/D-6M | 6M track run | qty 1 | $449.40
+  MX5C3000.TB | S1/D | Track 3000mm | qty 1 | (no price)
+  MX5C.LIVE.TB | S1/D | Live end connector | qty 1 | (no price)
+  MX5C.ECAP.TB | S1/D | End cap | qty 1 | (no price)
+  TRACK-UNIOS | S1/D-10M | 10M track run | qty 4 | $756.24
+  MX5C3000.TB | S1/D | Track 3000mm | qty 4 | (no price)
+
+Then the 3 accessories after S1/D-6M should ALL have type="S1/D-6M", and the accessory after S1/D-10M should have type="S1/D-10M".
 
 **LUXSON ILLUMINATION:**
 - Columns: Product name and additional info | Qty | Price | Unit | Sum

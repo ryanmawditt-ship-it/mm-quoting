@@ -277,3 +277,8 @@
 - [x] Fix Raylinc track bundling: S1/D-6M, S1/D-10M etc. are track systems where accessories following the main track item should inherit parent track type
 - [x] Update AI extraction prompt with Raylinc track system bundling rules (detailed example included)
 - [x] Fix existing Raylinc data in Warner Tavern project: 5 accessories → S1/D-6M, 7 accessories → S1/D-10M, 12 customer quote items updated
+- [x] Group-aware reordering in Step 2: moving a grouped item moves the entire type group together
+- [x] Move to Top/Up/Down/Bottom controls now operate on whole groups, not individual items
+- [x] Sequence number input repositions entire groups as a unit
+- [x] Visual group styling: top/bottom accent borders and "Group · N items" label for multi-item groups
+- [x] Order column uses rowSpan so move controls appear once per group

@@ -3154,85 +3154,222 @@ function QuoteBuilder({
             )}
           </div>
 
-          {/* Review & Reorder Table — editable Qty, Margin, quick move buttons */}
+          {/* Review & Reorder Table — group-aware reordering */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Review & Reorder ({orderedSelectedItems.length} items)</h3>
-              <p className="text-xs text-muted-foreground">Use arrows to reorder or type a line number. Edit Qty and Margin directly.</p>
+              <p className="text-xs text-muted-foreground">Grouped items move together. Use arrows or type a group number to reorder.</p>
             </div>
 
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-3 text-left font-medium text-muted-foreground">Order</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground w-24">Qty</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground">Sell</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
-                    <th className="p-3 text-center font-medium text-muted-foreground w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orderedSelectedItems.map(({ id: itemId, data, lineItem }, idx) => {
-                    const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
-                    const moveItem = (fromIdx: number, toIdx: number) => {
-                      const currentOrder = orderedItemIds.filter((id: number) => selectedItems.has(id));
-                      const item = currentOrder[fromIdx];
-                      const newOrder = currentOrder.filter((_: number, i: number) => i !== fromIdx);
-                      newOrder.splice(toIdx, 0, item);
-                      const unselected = orderedItemIds.filter((id: number) => !selectedItems.has(id));
-                      setOrderedItemIds([...newOrder, ...unselected]);
-                    };
-                    // Look up customer schedule quantity for this item's type
-                    let custQty: number | null = null;
-                    if (importedSchedule && data.itemType) {
-                      const normItemType = data.itemType.toUpperCase().replace(/^TYPE\s+/i, "").replace(/^LUMINAIRE\s+/i, "").replace(/^FIXTURE\s+/i, "").replace(/^FTG\s+/i, "").replace(/\s+/g, " ").trim();
-                      const match = importedSchedule.find(s => {
-                        const normSched = s.code.toUpperCase().replace(/^TYPE\s+/i, "").replace(/^LUMINAIRE\s+/i, "").replace(/^FIXTURE\s+/i, "").replace(/^FTG\s+/i, "").replace(/\s+/g, " ").trim();
-                        return normSched === normItemType || normSched.includes(normItemType) || normItemType.includes(normSched);
-                      });
-                      if (match && match.quantity != null && match.quantity > 0) {
-                        custQty = match.quantity;
-                      }
-                    }
-                    return (
-                      <ReviewRow
-                        key={itemId}
-                        lineNum={idx + 1}
-                        itemType={data.itemType}
-                        description={lineItem?.item?.description || data.description}
-                        productCode={lineItem?.item?.productCode || ""}
-                        quantity={data.quantity}
-                        costPrice={data.costPrice}
-                        margin={data.margin}
-                        sellPrice={sellPrice}
-                        lineTotal={sellPrice * data.quantity}
-                        totalItems={orderedSelectedItems.length}
-                        onQuantityChange={(qty: number) => updateItemQuantity(itemId, qty)}
-                        onMarginChange={(margin: number) => updateItemMargin(itemId, margin)}
-                        onTypeChange={(type: string) => updateItemType(itemId, type)}
-                        onRemove={() => {
-                          const newSelected = new Map(selectedItems);
-                          newSelected.delete(itemId);
-                          setSelectedItems(newSelected);
-                          setOrderedItemIds(prev => prev.filter((id: number) => id !== itemId));
-                        }}
-                        onMoveToTop={() => moveItem(idx, 0)}
-                        onMoveUp={() => moveItem(idx, idx - 1)}
-                        onMoveDown={() => moveItem(idx, idx + 1)}
-                        onMoveToBottom={() => moveItem(idx, orderedSelectedItems.length - 1)}
-                        onSequenceChange={(newPos: number) => moveItem(idx, newPos - 1)}
-                        customerScheduleQty={custQty}
-                      />
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {(() => {
+              // Build groups: consecutive items with the same type form a group
+              const groups: { type: string; items: typeof orderedSelectedItems; startIdx: number }[] = [];
+              orderedSelectedItems.forEach((item, idx) => {
+                const lastGroup = groups[groups.length - 1];
+                if (lastGroup && lastGroup.type === item.data.itemType) {
+                  lastGroup.items.push(item);
+                } else {
+                  groups.push({ type: item.data.itemType, items: [item], startIdx: idx });
+                }
+              });
+
+              // Move an entire group from one group index to another
+              const moveGroup = (fromGroupIdx: number, toGroupIdx: number) => {
+                if (fromGroupIdx === toGroupIdx || toGroupIdx < 0 || toGroupIdx >= groups.length) return;
+                const currentOrder = orderedItemIds.filter((id: number) => selectedItems.has(id));
+                const group = groups[fromGroupIdx];
+                const groupIds = group.items.map(i => i.id);
+                // Remove group items from current order
+                const withoutGroup = currentOrder.filter((id: number) => !groupIds.includes(id));
+                // Find insertion point: insert before the target group's first item
+                // Rebuild groups from withoutGroup to find correct insertion point
+                const remainingGroups: { ids: number[] }[] = [];
+                withoutGroup.forEach((id: number) => {
+                  const data = selectedItems.get(id);
+                  if (!data) return;
+                  const lastRG = remainingGroups[remainingGroups.length - 1];
+                  const lastRGType = lastRG ? selectedItems.get(lastRG.ids[0])?.itemType : null;
+                  if (lastRG && lastRGType === data.itemType) {
+                    lastRG.ids.push(id);
+                  } else {
+                    remainingGroups.push({ ids: [id] });
+                  }
+                });
+                // Determine actual target index in remaining groups
+                let actualTarget = toGroupIdx;
+                if (toGroupIdx > fromGroupIdx) actualTarget = toGroupIdx - 1;
+                if (actualTarget < 0) actualTarget = 0;
+                if (actualTarget > remainingGroups.length) actualTarget = remainingGroups.length;
+                // Build new order by inserting group at the target position
+                const newOrder: number[] = [];
+                let inserted = false;
+                remainingGroups.forEach((rg, rgIdx) => {
+                  if (rgIdx === actualTarget && !inserted) {
+                    newOrder.push(...groupIds);
+                    inserted = true;
+                  }
+                  newOrder.push(...rg.ids);
+                });
+                if (!inserted) newOrder.push(...groupIds);
+                const unselected = orderedItemIds.filter((id: number) => !selectedItems.has(id));
+                setOrderedItemIds([...newOrder, ...unselected]);
+              };
+
+              return (
+                <div className="border rounded-lg overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="p-3 text-left font-medium text-muted-foreground w-40">Order</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+                        <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground w-24">Qty</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground">Sell</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
+                        <th className="p-3 text-center font-medium text-muted-foreground w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groups.map((group, groupIdx) => {
+                        const isMultiItemGroup = group.items.length > 1;
+                        return group.items.map((item, itemIdxInGroup) => {
+                          const { id: itemId, data, lineItem } = item;
+                          const globalIdx = group.startIdx + itemIdxInGroup;
+                          const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
+                          const isFirstInGroup = itemIdxInGroup === 0;
+                          const isLastInGroup = itemIdxInGroup === group.items.length - 1;
+
+                          // Customer schedule qty lookup
+                          let custQty: number | null = null;
+                          if (importedSchedule && data.itemType) {
+                            const normItemType = data.itemType.toUpperCase().replace(/^TYPE\s+/i, "").replace(/^LUMINAIRE\s+/i, "").replace(/^FIXTURE\s+/i, "").replace(/^FTG\s+/i, "").replace(/\s+/g, " ").trim();
+                            const match = importedSchedule.find(s => {
+                              const normSched = s.code.toUpperCase().replace(/^TYPE\s+/i, "").replace(/^LUMINAIRE\s+/i, "").replace(/^FIXTURE\s+/i, "").replace(/^FTG\s+/i, "").replace(/\s+/g, " ").trim();
+                              return normSched === normItemType || normSched.includes(normItemType) || normItemType.includes(normSched);
+                            });
+                            if (match && match.quantity != null && match.quantity > 0) {
+                              custQty = match.quantity;
+                            }
+                          }
+                          const hasQtyMismatch = custQty != null && custQty > 0 && data.quantity !== custQty;
+
+                          // Group visual styling
+                          const groupBorderClass = isMultiItemGroup
+                            ? `${isFirstInGroup ? "border-t-2 border-t-primary/30" : ""} ${isLastInGroup ? "border-b-2 border-b-primary/30" : "border-b border-b-primary/10"} bg-primary/[0.02]`
+                            : "border-b";
+
+                          return (
+                            <tr key={itemId} className={`${groupBorderClass} hover:bg-muted/30 ${hasQtyMismatch ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
+                              {/* Order / Move controls — only on first item of group, spans all rows */}
+                              {isFirstInGroup && (
+                                <td className="p-2" rowSpan={isMultiItemGroup ? group.items.length : 1}>
+                                  <div className="flex items-center gap-0.5">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveGroup(groupIdx, 0)} disabled={groupIdx === 0} title="Move group to top">
+                                      <ChevronsUp className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveGroup(groupIdx, groupIdx - 1)} disabled={groupIdx === 0} title="Move group up">
+                                      <ArrowUp className="h-3 w-3" />
+                                    </Button>
+                                    <Input
+                                      type="number"
+                                      className="w-12 h-7 text-center text-xs font-mono font-bold"
+                                      value={groupIdx + 1}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (val >= 1 && val <= groups.length) moveGroup(groupIdx, val - 1);
+                                      }}
+                                      min={1}
+                                      max={groups.length}
+                                      title={isMultiItemGroup ? `Group ${groupIdx + 1} of ${groups.length} (${group.items.length} items)` : `Item ${groupIdx + 1} of ${groups.length}`}
+                                    />
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveGroup(groupIdx, groupIdx + 1)} disabled={groupIdx === groups.length - 1} title="Move group down">
+                                      <ArrowDown className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveGroup(groupIdx, groups.length - 1)} disabled={groupIdx === groups.length - 1} title="Move group to bottom">
+                                      <ChevronsDown className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {isMultiItemGroup && (
+                                    <div className="text-[10px] text-muted-foreground mt-1 text-center">
+                                      Group · {group.items.length} items
+                                    </div>
+                                  )}
+                                </td>
+                              )}
+                              <td className="p-2">
+                                <Input
+                                  type="text"
+                                  className={`w-24 h-7 text-xs font-medium ${!data.itemType || !data.itemType.trim() ? "border-red-400 bg-red-50 dark:bg-red-950/30 ring-1 ring-red-400" : ""}`}
+                                  value={data.itemType}
+                                  onChange={(e) => updateItemType(itemId, e.target.value)}
+                                  placeholder="e.g. WL01"
+                                  title="Type code (required)"
+                                />
+                              </td>
+                              <td className="p-2 text-xs max-w-[250px]">
+                                <div className="truncate" title={lineItem?.item?.description || data.description}>{lineItem?.item?.description || data.description}</div>
+                                {(lineItem?.item?.productCode || "") && <div className="text-[10px] text-muted-foreground font-mono">{lineItem?.item?.productCode || ""}</div>}
+                              </td>
+                              <td className="p-2 text-right">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <Input
+                                    type="number"
+                                    className={`w-20 h-7 text-right text-xs ${hasQtyMismatch ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-400" : ""}`}
+                                    value={data.quantity}
+                                    onChange={(e) => updateItemQuantity(itemId, parseInt(e.target.value) || 0)}
+                                    min={0}
+                                  />
+                                  {hasQtyMismatch && (
+                                    <button
+                                      onClick={() => updateItemQuantity(itemId, custQty!)}
+                                      className="text-[10px] text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 hover:underline cursor-pointer whitespace-nowrap"
+                                      title={`Customer requested ${custQty}. Click to update.`}
+                                    >
+                                      Customer: {custQty} →
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-2 text-right font-mono text-xs text-muted-foreground">
+                                ${data.costPrice.toFixed(2)}
+                              </td>
+                              <td className="p-2 text-right">
+                                <Input
+                                  type="number"
+                                  className="w-20 h-7 text-right text-xs"
+                                  value={data.margin}
+                                  onChange={(e) => updateItemMargin(itemId, parseInt(e.target.value) || 0)}
+                                  min={0}
+                                  max={99}
+                                />
+                              </td>
+                              <td className="p-2 text-right font-mono text-xs">
+                                ${sellPrice.toFixed(2)}
+                              </td>
+                              <td className="p-2 text-right font-mono text-xs font-medium">
+                                ${(sellPrice * data.quantity).toFixed(2)}
+                              </td>
+                              <td className="p-2 text-center">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => {
+                                  const newSelected = new Map(selectedItems);
+                                  newSelected.delete(itemId);
+                                  setSelectedItems(newSelected);
+                                  setOrderedItemIds(prev => prev.filter((id: number) => id !== itemId));
+                                }}>
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Totals */}

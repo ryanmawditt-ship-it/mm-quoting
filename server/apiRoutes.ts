@@ -154,6 +154,21 @@ You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text t
 - Freight is a separate line item at the end
 - Validity: check quote terms
 
+**SMARTSCAPE CONNECTED LIGHTING SYSTEMS:**
+- Columns: PART TYPE | DESCRIPTION | QTY | AMOUNT
+- CRITICAL: Smartscape quotes are BUNDLED QUOTES — individual items have NO prices in the AMOUNT column. The only price shown is the SUBTOTAL at the bottom of the page.
+- You MUST treat the ENTIRE quote as ONE single bundled line item:
+  * description: A summary listing all components (e.g., "Lighting Controls Bundle: System Gateway x1, DALI Controller x1, Relay Controller x2, Multi Button Switch x1, Documentation, Commissioning, Local Freight")
+  * quantity: 1
+  * unitPrice: The SUBTOTAL amount (ex-GST) shown at the bottom. This is the price BEFORE GST. Do NOT use the TOTAL (inc GST).
+  * isBundled: false (this IS the priced bundle item)
+  * type: Use the project description from the quote header to determine the type (e.g., "LIGHTING CONTROLS", "ILUMEN/ARCLED", "LED STRIP", etc.)
+  * productCode: Use the quote number (e.g., "SH45380.1")
+- Do NOT extract individual components as separate line items
+- Do NOT extract freight as a separate line item — it is included in the bundle SUBTOTAL
+- The SUBTOTAL is always the ex-GST price. The GST line and TOTAL (inc GST) should be ignored for pricing.
+- Quote validity: check "Valid Until" date on the quote
+
 **CLEVERTRONICS:**
 - Columns: Type Number | Product Code | Item Description | Comments | Qty | Unit Price | Extended Price
 - "Type Number" contains fixture type codes like 2S, 1E, 2E, 3E/4E, 5E, 6E

@@ -282,3 +282,6 @@
 - [x] Sequence number input repositions entire groups as a unit
 - [x] Visual group styling: top/bottom accent borders and "Group · N items" label for multi-item groups
 - [x] Order column uses rowSpan so move controls appear once per group
+- [x] Fix Smartscape quote extraction: each quote now treated as one bundled line with total ex-GST price
+- [x] Update AI extraction prompt with Smartscape Connected Lighting Systems bundled quote format rules
+- [x] Fix existing Boardwalk Tavern Smartscape data: 27 individual items replaced with 3 bundled lines ($5,627.52 + $17,529.44 + $26,642.11)

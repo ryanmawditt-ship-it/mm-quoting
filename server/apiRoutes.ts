@@ -156,17 +156,20 @@ You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text t
 
 **SMARTSCAPE CONNECTED LIGHTING SYSTEMS:**
 - Columns: PART TYPE | DESCRIPTION | QTY | AMOUNT
-- CRITICAL: Smartscape quotes are BUNDLED QUOTES — individual items have NO prices in the AMOUNT column. The only price shown is the SUBTOTAL at the bottom of the page.
-- You MUST treat the ENTIRE quote as ONE single bundled line item:
-  * description: A summary listing all components (e.g., "Lighting Controls Bundle: System Gateway x1, DALI Controller x1, Relay Controller x2, Multi Button Switch x1, Documentation, Commissioning, Local Freight")
-  * quantity: 1
-  * unitPrice: The SUBTOTAL amount (ex-GST) shown at the bottom. This is the price BEFORE GST. Do NOT use the TOTAL (inc GST).
-  * isBundled: false (this IS the priced bundle item)
-  * type: Use the project description from the quote header to determine the type (e.g., "LIGHTING CONTROLS", "ILUMEN/ARCLED", "LED STRIP", etc.)
-  * productCode: Use the quote number (e.g., "SH45380.1")
-- Do NOT extract individual components as separate line items
-- Do NOT extract freight as a separate line item — it is included in the bundle SUBTOTAL
-- The SUBTOTAL is always the ex-GST price. The GST line and TOTAL (inc GST) should be ignored for pricing.
+- CRITICAL: Smartscape quotes are BUNDLED QUOTES — individual items have NO individual prices. The only price is the SUBTOTAL (ex-GST) at the bottom of the page.
+- Extract EVERY individual item as a separate line item, but group them all under ONE type:
+  * type: Use the quote category from the header (e.g., "LIGHTING CONTROLS", "ILUMEN/ARCLED", "LED STRIP/FLEX")
+  * The FIRST item in the list gets the SUBTOTAL (ex-GST) as its unitPrice. This is the total cost for the entire bundle.
+  * ALL remaining items get unitPrice: 0 and isBundled: true
+  * Each item keeps its own description, quantity, and productCode from the PART TYPE column
+  * Freight ("Local Freight") should be extracted as a separate line with type "FREIGHT", isBundled: true, unitPrice: 0
+- Example for a Lighting Controls quote with SUBTOTAL $5,627.52:
+  Item 1: type="LIGHTING CONTROLS", desc="System Gateway", qty=1, unitPrice=5627.52, isBundled=false
+  Item 2: type="LIGHTING CONTROLS", desc="DALI Controller", qty=1, unitPrice=0, isBundled=true
+  Item 3: type="LIGHTING CONTROLS", desc="Relay Controller", qty=2, unitPrice=0, isBundled=true
+  ...
+  Last: type="FREIGHT", desc="Local Freight", qty=1, unitPrice=0, isBundled=true
+- The SUBTOTAL is always the ex-GST price. IGNORE the GST line and TOTAL (inc GST).
 - Quote validity: check "Valid Until" date on the quote
 
 **CLEVERTRONICS:**

@@ -285,3 +285,7 @@
 - [x] Fix Smartscape quote extraction: each quote now treated as one bundled line with total ex-GST price
 - [x] Update AI extraction prompt with Smartscape Connected Lighting Systems bundled quote format rules
 - [x] Fix existing Boardwalk Tavern Smartscape data: 27 individual items replaced with 3 bundled lines ($5,627.52 + $17,529.44 + $26,642.11)
+- [x] Fix Smartscape quotes: restored individual line items grouped under one type (LIGHTING CONTROLS, ILUMEN/ARCLED, LED STRIP/FLEX)
+- [x] First item in each group carries the total ex-GST price, rest are bundled at $0
+- [x] Updated extraction prompt: extract all items individually, same type, first item gets subtotal
+- [x] Fixed existing Boardwalk Tavern data: 3 quotes with 7+11+9 individual items

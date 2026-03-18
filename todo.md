@@ -289,3 +289,6 @@
 - [x] First item in each group carries the total ex-GST price, rest are bundled at $0
 - [x] Updated extraction prompt: extract all items individually, same type, first item gets subtotal
 - [x] Fixed existing Boardwalk Tavern data: 3 quotes with 7+11+9 individual items
+- [x] Fix Smartscape lump sum pricing: priced item now has qty=1 so group total is not multiplied
+- [x] Updated extraction prompt: first item always gets qty=1 with SUBTOTAL as lump sum price
+- [x] Fixed existing data: LED Downlight qty 13→1, Arcled Strip TW qty 10→1

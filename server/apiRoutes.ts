@@ -159,12 +159,12 @@ You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text t
 - CRITICAL: Smartscape quotes are BUNDLED QUOTES — individual items have NO individual prices. The only price is the SUBTOTAL (ex-GST) at the bottom of the page.
 - Extract EVERY individual item as a separate line item, but group them all under ONE type:
   * type: Use the quote category from the header (e.g., "LIGHTING CONTROLS", "ILUMEN/ARCLED", "LED STRIP/FLEX")
-  * The FIRST item in the list gets the SUBTOTAL (ex-GST) as its unitPrice. This is the total cost for the entire bundle.
-  * ALL remaining items get unitPrice: 0 and isBundled: true
-  * Each item keeps its own description, quantity, and productCode from the PART TYPE column
+  * The FIRST item in the list gets the SUBTOTAL (ex-GST) as its unitPrice AND its quantity MUST be set to 1 (not the actual qty from the PDF). This is because the price is a LUMP SUM for the entire bundle, not a per-unit price.
+  * ALL remaining items get unitPrice: 0 and isBundled: true, and keep their actual quantities from the PDF
+  * Each item keeps its own description and productCode from the PART TYPE column
   * Freight ("Local Freight") should be extracted as a separate line with type "FREIGHT", isBundled: true, unitPrice: 0
 - Example for a Lighting Controls quote with SUBTOTAL $5,627.52:
-  Item 1: type="LIGHTING CONTROLS", desc="System Gateway", qty=1, unitPrice=5627.52, isBundled=false
+  Item 1: type="LIGHTING CONTROLS", desc="System Gateway", qty=1 (ALWAYS 1 for the priced item), unitPrice=5627.52, isBundled=false
   Item 2: type="LIGHTING CONTROLS", desc="DALI Controller", qty=1, unitPrice=0, isBundled=true
   Item 3: type="LIGHTING CONTROLS", desc="Relay Controller", qty=2, unitPrice=0, isBundled=true
   ...

@@ -1,0 +1,100 @@
+{
+  "query": "SELECT li.id, li.productCode, li.description, li.quantity, li.unitOfMeasure, li.costPrice, li.totalPrice, sq.projectId FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN suppliers s ON sq.supplierId = s.id WHERE s.name LIKE '%ELECTRA%' AND li.unitOfMeasure = 'KM' LIMIT 15;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT li.id, li.productCode, li.description, li.quantity, li.unitOfMeasure, li.costPrice, li.totalPrice, sq.projectId FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN suppliers s ON sq.supplierId = s.id WHERE s.name LIKE '%ELECTRA%' AND li.unitOfMeasure = 'KM' LIMIT 15;",
+  "rows": [
+    {
+      "id": "510001",
+      "productCode": "XLPE1950-BBLK",
+      "description": "95MM XLPE COPPER KM BLK Ex Bris",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "25380.0000",
+      "totalPrice": "7614.0000",
+      "projectId": "510001"
+    },
+    {
+      "id": "510002",
+      "productCode": "XLPE11200-BBLK",
+      "description": "120MM XLPE COPPER KM BLK Ex Bris",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "32940.0000",
+      "totalPrice": "6588.0000",
+      "projectId": "510001"
+    },
+    {
+      "id": "510017",
+      "productCode": "XLPE1950-BBLK",
+      "description": "95MM XLPE COPPER KM BLK Ex Bris",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "25380.0000",
+      "totalPrice": "7614.0000",
+      "projectId": "510001"
+    },
+    {
+      "id": "510018",
+      "productCode": "XLPE11200-BBLK",
+      "description": "120MM XLPE COPPER KM BLK Ex Bris",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "32940.0000",
+      "totalPrice": "6588.0000",
+      "projectId": "510001"
+    },
+    {
+      "id": "660002",
+      "productCode": "SRC2025+E-B",
+      "description": "7/0.67 X 2C+E CIRC ORE KM 0.6/1KV",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "2783.9000",
+      "totalPrice": "1113.5600",
+      "projectId": "660001"
+    },
+    {
+      "id": "660004",
+      "productCode": "SRC2060+E-B",
+      "description": "7/104 X 2C + E KM 0.6/1KV",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "4732.9000",
+      "totalPrice": "236.6500",
+      "projectId": "660001"
+    },
+    {
+      "id": "660005",
+      "productCode": "XLPE2160E-BORE",
+      "description": "16 mm 7/1.70X 2C + E CU/XLPE/PVC ORE SH",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "11629.8000",
+      "totalPrice": "1511.8700",
+      "projectId": "660001"
+    },
+    {
+      "id": "660007",
+      "productCode": "XLPE2100E-BORE",
+      "description": "10.0 MM X 2C + E XLPE//PVC ORG KM",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "8046.4000",
+      "totalPrice": "804.6400",
+      "projectId": "660001"
+    },
+    {
+      "id": "660010",
+      "productCode": "EAS7301P-B",
+      "description": "7/0.3 X 1Pr. O/A SHLD KM 4 x 200mtr",
+      "quantity": "1",
+      "unitOfMeasure": "KM",
+      "costPrice": "645.0000",
+      "totalPrice": "516.0000",
+      "projectId": "660001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproductCode\tdescription\tquantity\tunitOfMeasure\tcostPrice\ttotalPrice\tprojectId\n510001\tXLPE1950-BBLK\t95MM XLPE COPPER KM BLK Ex Bris\t0\tKM\t25380.0000\t7614.0000\t510001\n510002\tXLPE11200-BBLK\t120MM XLPE COPPER KM BLK Ex Bris\t0\tKM\t32940.0000\t6588.0000\t510001\n510017\tXLPE1950-BBLK\t95MM XLPE COPPER KM BLK Ex Bris\t0\tKM\t25380.0000\t7614.0000\t510001\n510018\tXLPE11200-BBLK\t120MM XLPE COPPER KM BLK Ex Bris\t0\tKM\t32940.0000\t6588.0000\t510001\n660002\tSRC2025+E-B\t7/0.67 X 2C+E CIRC ORE KM 0.6/1KV\t0\tKM\t2783.9000\t1113.5600\t660001\n660004\tSRC2060+E-B\t7/104 X 2C + E KM 0.6/1KV\t0\tKM\t4732.9000\t236.6500\t660001\n660005\tXLPE2160E-BORE\t16 mm 7/1.70X 2C + E CU/XLPE/PVC ORE SH\t0\tKM\t11629.8000\t1511.8700\t660001\n660007\tXLPE2100E-BORE\t10.0 MM X 2C + E XLPE//PVC ORG KM\t0\tKM\t8046.4000\t804.6400\t660001\n660010\tEAS7301P-B\t7/0.3 X 1Pr. O/A SHLD KM 4 x 200mtr\t1\tKM\t645.0000\t516.0000\t660001\n",
+  "stderr": "",
+  "execution_time_ms": 1545
+}

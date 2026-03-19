@@ -22,6 +22,7 @@ import {
   getSalespersons,
   addProjectSupplier,
 } from "./db";
+import { normalizeToPer100m } from "../shared/cableUnits";
 import PDFDocument from "pdfkit";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 16 * 1024 * 1024 } });
@@ -547,6 +548,11 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         discountPercent
       );
 
+      // Normalize unit of measure to per 100m for the PDF display
+      const origUom = origItem?.unitOfMeasure || "EA";
+      const conversion = normalizeToPer100m(1, origUom); // just to get the display unit
+      const displayUom = conversion.displayUnit;
+
       quoteLineItems.push({
         lineOrder: item.lineOrder,
         itemType,
@@ -557,7 +563,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         marginPercent,
         sellPrice,
         leadTimeDays: origItem?.leadTimeDays || null,
-        unitOfMeasure: origItem?.unitOfMeasure || "EA",
+        unitOfMeasure: displayUom,
       });
     }
 

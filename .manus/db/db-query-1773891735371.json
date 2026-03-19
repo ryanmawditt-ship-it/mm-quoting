@@ -1,0 +1,73 @@
+{
+  "query": "SELECT li.id, li.productCode, li.description, li.quantity, li.unitOfMeasure, li.costPrice, li.totalPrice FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN suppliers s ON sq.supplierId = s.id WHERE s.name LIKE '%Prysmian%' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT li.id, li.productCode, li.description, li.quantity, li.unitOfMeasure, li.costPrice, li.totalPrice FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN suppliers s ON sq.supplierId = s.id WHERE s.name LIKE '%Prysmian%' LIMIT 10;",
+  "rows": [
+    {
+      "id": "510010",
+      "productCode": "20199486",
+      "description": "0.6/1KV 95X1C XLPE NAT/BK MMCCEC01XGPNB37/1.78 95CUXLPBK",
+      "quantity": "300",
+      "unitOfMeasure": "M",
+      "costPrice": "28.2100",
+      "totalPrice": "8463.0000"
+    },
+    {
+      "id": "510011",
+      "productCode": "20199493",
+      "description": "0.6/1KV 120X1C XLPE NAT/BK MMCCEC01XGPNB37/2.03 120CUXLPBK",
+      "quantity": "200",
+      "unitOfMeasure": "M",
+      "costPrice": "36.6000",
+      "totalPrice": "7320.0000"
+    },
+    {
+      "id": "510012",
+      "productCode": "20200040",
+      "description": "450/750V 2.5X3C+E FLAT WH MMCCEB03PFIKW7/0.67 2.53CEFWH",
+      "quantity": "3000",
+      "unitOfMeasure": "M",
+      "costPrice": "3.5000",
+      "totalPrice": "10500.0000"
+    },
+    {
+      "id": "510013",
+      "productCode": "20204033",
+      "description": "450/750V 2.5X3C+E FLAT BKRW/BU AIRCON MMC20204033",
+      "quantity": "3000",
+      "unitOfMeasure": "M",
+      "costPrice": "3.5000",
+      "totalPrice": "10500.0000"
+    },
+    {
+      "id": "510014",
+      "productCode": "20200050",
+      "description": "450/750V 4X4C+E CIRC OR MMCCEB04PJPLG7/0.85 44CEOC",
+      "quantity": "800",
+      "unitOfMeasure": "M",
+      "costPrice": "6.1500",
+      "totalPrice": "4920.0000"
+    },
+    {
+      "id": "510015",
+      "productCode": "20199579",
+      "description": "0.6/1KV 10X2C+E CIRC OR MMCCEB02PJPMG7/1.35 102CEOC1KV",
+      "quantity": "500",
+      "unitOfMeasure": "M",
+      "costPrice": "8.5600",
+      "totalPrice": "4280.0000"
+    },
+    {
+      "id": "510016",
+      "productCode": "20199593",
+      "description": "0.6/1KV 16X2C+E CIRC OR MMCCEB02PJPMG7/1.70 162CEOC1KV",
+      "quantity": "500",
+      "unitOfMeasure": "M",
+      "costPrice": "12.7800",
+      "totalPrice": "6390.0000"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproductCode\tdescription\tquantity\tunitOfMeasure\tcostPrice\ttotalPrice\n510010\t20199486\t0.6/1KV 95X1C XLPE NAT/BK MMCCEC01XGPNB37/1.78 95CUXLPBK\t300\tM\t28.2100\t8463.0000\n510011\t20199493\t0.6/1KV 120X1C XLPE NAT/BK MMCCEC01XGPNB37/2.03 120CUXLPBK\t200\tM\t36.6000\t7320.0000\n510012\t20200040\t450/750V 2.5X3C+E FLAT WH MMCCEB03PFIKW7/0.67 2.53CEFWH\t3000\tM\t3.5000\t10500.0000\n510013\t20204033\t450/750V 2.5X3C+E FLAT BKRW/BU AIRCON MMC20204033\t3000\tM\t3.5000\t10500.0000\n510014\t20200050\t450/750V 4X4C+E CIRC OR MMCCEB04PJPLG7/0.85 44CEOC\t800\tM\t6.1500\t4920.0000\n510015\t20199579\t0.6/1KV 10X2C+E CIRC OR MMCCEB02PJPMG7/1.35 102CEOC1KV\t500\tM\t8.5600\t4280.0000\n510016\t20199593\t0.6/1KV 16X2C+E CIRC OR MMCCEB02PJPMG7/1.70 162CEOC1KV\t500\tM\t12.7800\t6390.0000\n",
+  "stderr": "",
+  "execution_time_ms": 1527
+}

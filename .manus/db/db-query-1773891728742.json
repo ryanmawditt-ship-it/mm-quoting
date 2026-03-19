@@ -1,0 +1,45 @@
+{
+  "query": "SELECT li.unitOfMeasure, COUNT(*) as cnt, s.name as supplierName FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN suppliers s ON sq.supplierId = s.id WHERE s.name LIKE '%ELECTRA%' OR s.name LIKE '%Prysmian%' OR s.name LIKE '%prysmian%' OR s.name LIKE '%electra%' GROUP BY li.unitOfMeasure, s.name ORDER BY s.name, li.unitOfMeasure;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT li.unitOfMeasure, COUNT(*) as cnt, s.name as supplierName FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN suppliers s ON sq.supplierId = s.id WHERE s.name LIKE '%ELECTRA%' OR s.name LIKE '%Prysmian%' OR s.name LIKE '%prysmian%' OR s.name LIKE '%electra%' GROUP BY li.unitOfMeasure, s.name ORDER BY s.name, li.unitOfMeasure;",
+  "rows": [
+    {
+      "unitOfMeasure": "100M",
+      "cnt": "10",
+      "supplierName": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "unitOfMeasure": "500M",
+      "cnt": "5",
+      "supplierName": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "unitOfMeasure": "500m",
+      "cnt": "2",
+      "supplierName": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "unitOfMeasure": "EA",
+      "cnt": "4",
+      "supplierName": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "unitOfMeasure": "KM",
+      "cnt": "9",
+      "supplierName": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "unitOfMeasure": "Unit",
+      "cnt": "2",
+      "supplierName": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "unitOfMeasure": "M",
+      "cnt": "7",
+      "supplierName": "Prysmian Australia Pty Ltd"
+    }
+  ],
+  "messages": [],
+  "stdout": "unitOfMeasure\tcnt\tsupplierName\n100M\t10\tELECTRA CABLES (Aust.) Pty Limited\n500M\t5\tELECTRA CABLES (Aust.) Pty Limited\n500m\t2\tELECTRA CABLES (Aust.) Pty Limited\nEA\t4\tELECTRA CABLES (Aust.) Pty Limited\nKM\t9\tELECTRA CABLES (Aust.) Pty Limited\nUnit\t2\tELECTRA CABLES (Aust.) Pty Limited\nM\t7\tPrysmian Australia Pty Ltd\n",
+  "stderr": "",
+  "execution_time_ms": 1539
+}

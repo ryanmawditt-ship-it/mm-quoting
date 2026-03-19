@@ -1,0 +1,118 @@
+{
+  "query": "SELECT li.id, li.productCode, li.description, li.quantity, li.unitOfMeasure, li.costPrice, li.totalPrice FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN projects p ON sq.projectId = p.id WHERE p.name LIKE '%Coolalinga%' ORDER BY li.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT li.id, li.productCode, li.description, li.quantity, li.unitOfMeasure, li.costPrice, li.totalPrice FROM line_items li JOIN supplier_quotes sq ON li.supplierQuoteId = sq.id JOIN projects p ON sq.projectId = p.id WHERE p.name LIKE '%Coolalinga%' ORDER BY li.id;",
+  "rows": [
+    {
+      "id": "660001",
+      "productCode": "SRC2025+E-500",
+      "description": "7/0.67 X 2C+E CIRC ORE 500M 0.6/1KV",
+      "quantity": "1",
+      "unitOfMeasure": "500M",
+      "costPrice": "1391.9500",
+      "totalPrice": "1391.9500"
+    },
+    {
+      "id": "660002",
+      "productCode": "SRC2025+E-B",
+      "description": "7/0.67 X 2C+E CIRC ORE KM 0.6/1KV",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "2783.9000",
+      "totalPrice": "1113.5600"
+    },
+    {
+      "id": "660003",
+      "productCode": "SRC2040+E-500",
+      "description": "7/0.85X2+E 500M 0.6/1KV",
+      "quantity": "1",
+      "unitOfMeasure": "500M",
+      "costPrice": "1894.1000",
+      "totalPrice": "1894.1000"
+    },
+    {
+      "id": "660004",
+      "productCode": "SRC2060+E-B",
+      "description": "7/104 X 2C + E KM 0.6/1KV",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "4732.9000",
+      "totalPrice": "236.6500"
+    },
+    {
+      "id": "660005",
+      "productCode": "XLPE2160E-BORE",
+      "description": "16 mm 7/1.70X 2C + E CU/XLPE/PVC ORE SH",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "11629.8000",
+      "totalPrice": "1511.8700"
+    },
+    {
+      "id": "660006",
+      "productCode": "XLPE2100E-500OR",
+      "description": "10.0 MM X 2C + E XLPE//PVC ORG 500M Ex Bris",
+      "quantity": "3",
+      "unitOfMeasure": "500M",
+      "costPrice": "4023.2000",
+      "totalPrice": "12069.6000"
+    },
+    {
+      "id": "660007",
+      "productCode": "XLPE2100E-BORE",
+      "description": "10.0 MM X 2C + E XLPE//PVC ORG KM",
+      "quantity": "0",
+      "unitOfMeasure": "KM",
+      "costPrice": "8046.4000",
+      "totalPrice": "804.6400"
+    },
+    {
+      "id": "660008",
+      "productCode": "EAS7206P-100",
+      "description": "7/0.2x6Pr O/A SHLD 100MM",
+      "quantity": "2",
+      "unitOfMeasure": "100M",
+      "costPrice": "184.5000",
+      "totalPrice": "369.0000"
+    },
+    {
+      "id": "660009",
+      "productCode": "EAS7210P-100",
+      "description": "7/0.2x10Pr O/A SHLD 100M",
+      "quantity": "2",
+      "unitOfMeasure": "100M",
+      "costPrice": "322.0000",
+      "totalPrice": "644.0000"
+    },
+    {
+      "id": "660010",
+      "productCode": "EAS7301P-B",
+      "description": "7/0.3 X 1Pr. O/A SHLD KM 4 x 200mtr",
+      "quantity": "1",
+      "unitOfMeasure": "KM",
+      "costPrice": "645.0000",
+      "totalPrice": "516.0000"
+    },
+    {
+      "id": "660011",
+      "productCode": "04060",
+      "description": "CUTTING CHARGES- ** PER CUT **",
+      "quantity": "1",
+      "unitOfMeasure": "EA",
+      "costPrice": "45.0000",
+      "totalPrice": "45.0000"
+    },
+    {
+      "id": "660012",
+      "productCode": "04240",
+      "description": "Freight Expense Freight to Darwin",
+      "quantity": "1",
+      "unitOfMeasure": "EA",
+      "costPrice": "1600.0000",
+      "totalPrice": "1600.0000"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproductCode\tdescription\tquantity\tunitOfMeasure\tcostPrice\ttotalPrice\n660001\tSRC2025+E-500\t7/0.67 X 2C+E CIRC ORE 500M 0.6/1KV\t1\t500M\t1391.9500\t1391.9500\n660002\tSRC2025+E-B\t7/0.67 X 2C+E CIRC ORE KM 0.6/1KV\t0\tKM\t2783.9000\t1113.5600\n660003\tSRC2040+E-500\t7/0.85X2+E 500M 0.6/1KV\t1\t500M\t1894.1000\t1894.1000\n660004\tSRC2060+E-B\t7/104 X 2C + E KM 0.6/1KV\t0\tKM\t4732.9000\t236.6500\n660005\tXLPE2160E-BORE\t16 mm 7/1.70X 2C + E CU/XLPE/PVC ORE SH\t0\tKM\t11629.8000\t1511.8700\n660006\tXLPE2100E-500OR\t10.0 MM X 2C + E XLPE//PVC ORG 500M Ex Bris\t3\t500M\t4023.2000\t12069.6000\n660007\tXLPE2100E-BORE\t10.0 MM X 2C + E XLPE//PVC ORG KM\t0\tKM\t8046.4000\t804.6400\n660008\tEAS7206P-100\t7/0.2x6Pr O/A SHLD 100MM\t2\t100M\t184.5000\t369.0000\n660009\tEAS7210P-100\t7/0.2x10Pr O/A SHLD 100M\t2\t100M\t322.0000\t644.0000\n660010\tEAS7301P-B\t7/0.3 X 1Pr. O/A SHLD KM 4 x 200mtr\t1\tKM\t645.0000\t516.0000\n660011\t04060\tCUTTING CHARGES- ** PER CUT **\t1\tEA\t45.0000\t45.0000\n660012\t04240\tFreight Expense Freight to Darwin\t1\tEA\t1600.0000\t1600.0000\n",
+  "stderr": "",
+  "execution_time_ms": 2018
+}

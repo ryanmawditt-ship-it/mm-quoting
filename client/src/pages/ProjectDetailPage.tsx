@@ -74,6 +74,7 @@ import {
   PenLine,
 } from "lucide-react";
 import React, { useState, useMemo, useCallback, useRef } from "react";
+import { normalizeToPer100m, isCableLengthUnit } from "@shared/cableUnits";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -2058,7 +2059,17 @@ function QuoteBuilderTable({
           )}
         </td>
         <td className="p-3 text-right font-mono text-muted-foreground">
-          ${cost.toFixed(2)}
+          <div className="flex flex-col items-end">
+            <span>${cost.toFixed(2)}</span>
+            {item._wasUnitConverted && (
+              <span className="text-[10px] text-amber-600" title={`Originally $${parseFloat(item._originalCostPrice).toFixed(2)}/${item._originalUnit}`}>
+                /{item.unitOfMeasure} ← {item._originalUnit}
+              </span>
+            )}
+            {!item._wasUnitConverted && isCableLengthUnit(item._originalUnit) && (
+              <span className="text-[10px] text-muted-foreground">/{item.unitOfMeasure}</span>
+            )}
+          </div>
         </td>
         <td className="p-3 text-right">
           {isSelected ? (
@@ -2279,7 +2290,17 @@ function QuoteBuilderTable({
                           )}
                         </td>
                         <td className="p-3 text-right font-mono text-muted-foreground">
-                          ${cost.toFixed(2)}
+                          <div className="flex flex-col items-end">
+                            <span>${cost.toFixed(2)}</span>
+                            {item._wasUnitConverted && (
+                              <span className="text-[10px] text-amber-600" title={`Originally $${parseFloat(item._originalCostPrice).toFixed(2)}/${item._originalUnit}`}>
+                                /{item.unitOfMeasure} ← {item._originalUnit}
+                              </span>
+                            )}
+                            {!item._wasUnitConverted && isCableLengthUnit(item._originalUnit) && (
+                              <span className="text-[10px] text-muted-foreground">/{item.unitOfMeasure}</span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-3 text-right">
                           {isSelected ? (
@@ -2413,7 +2434,20 @@ function QuoteBuilder({
       if (query.data) {
         const sq = supplierQuotes[idx];
         const supplier = suppliers.find((s) => s.id === sq.supplierId);
-        query.data.forEach((item) => {
+        query.data.forEach((rawItem) => {
+          // Normalize cable pricing to per 100m
+          const uom = rawItem.unitOfMeasure || "EA";
+          const conversion = normalizeToPer100m(parseFloat(rawItem.costPrice), uom);
+          const item = {
+            ...rawItem,
+            // Override costPrice with normalized per-100m price for cable items
+            costPrice: String(conversion.costPricePer100m.toFixed(4)),
+            unitOfMeasure: conversion.displayUnit,
+            // Preserve originals for reference
+            _originalCostPrice: rawItem.costPrice,
+            _originalUnit: uom,
+            _wasUnitConverted: conversion.wasConverted,
+          };
           items.push({ item, supplier, supplierQuote: sq });
         });
       }

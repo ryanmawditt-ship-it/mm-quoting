@@ -296,3 +296,9 @@
 - [x] Discount should reduce the supplier cost price before margin is applied (price - discount%)
 - [x] Store discount per line item in customer quote
 - [x] Update PDF generation to reflect discounted cost in pricing calculations
+- [x] Normalize cable supplier pricing to per 100m (some suppliers quote per km)
+- [x] Detect per-km items from supplier quotes (product codes, descriptions)
+- [x] Convert per-km cost to per-100m cost (divide by 10)
+- [x] Convert 500M cost to per-100m (divide by 5), M cost to per-100m (multiply by 100)
+- [x] Display converted unit pricing in quote builder with amber conversion indicators
+- [x] Ensure PDF generation uses correct per-100m unit of measure

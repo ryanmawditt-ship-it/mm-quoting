@@ -1,0 +1,61 @@
+{
+  "query": "SELECT DISTINCT s.name FROM suppliers s ORDER BY s.name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT DISTINCT s.name FROM suppliers s ORDER BY s.name;",
+  "rows": [
+    {
+      "name": "Clevertronics"
+    },
+    {
+      "name": "ELECTRA CABLES (Aust.) Pty Limited"
+    },
+    {
+      "name": "Everlite Lighting Group"
+    },
+    {
+      "name": "FOS Lighting Pty Ltd"
+    },
+    {
+      "name": "Gamma Illumination Pty Ltd"
+    },
+    {
+      "name": "Hunter Pacific International"
+    },
+    {
+      "name": "LIGHT AND DESIGN GROUP"
+    },
+    {
+      "name": "LIGHTING COLLECTIVE LUXURY LIGHTING"
+    },
+    {
+      "name": "LUXSON ILLUMINATION"
+    },
+    {
+      "name": "Lightcore"
+    },
+    {
+      "name": "NHP Electrical Engineering Products Pty Ltd"
+    },
+    {
+      "name": "Progetto One Pty Ltd trading as Lumen8 Architectural Lighting"
+    },
+    {
+      "name": "Prysmian Australia Pty Ltd"
+    },
+    {
+      "name": "Raylinc Agencies Pty Ltd"
+    },
+    {
+      "name": "Unknown Supplier"
+    },
+    {
+      "name": "Versalux Lighting Systems Pty Ltd"
+    },
+    {
+      "name": "smartscape connected lighting systems"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\nClevertronics\nELECTRA CABLES (Aust.) Pty Limited\nEverlite Lighting Group\nFOS Lighting Pty Ltd\nGamma Illumination Pty Ltd\nHunter Pacific International\nLIGHT AND DESIGN GROUP\nLIGHTING COLLECTIVE LUXURY LIGHTING\nLUXSON ILLUMINATION\nLightcore\nNHP Electrical Engineering Products Pty Ltd\nProgetto One Pty Ltd trading as Lumen8 Architectural Lighting\nPrysmian Australia Pty Ltd\nRaylinc Agencies Pty Ltd\nUnknown Supplier\nVersalux Lighting Systems Pty Ltd\nsmartscape connected lighting systems\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}

@@ -181,7 +181,8 @@ export const customerQuoteLineItems = mysqlTable("customer_quote_line_items", {
   description: text("description"), // May be edited from source
   costPrice: decimal("costPrice", { precision: 12, scale: 4 }).notNull(), // Locked cost at time of quote
   markupPercent: int("markupPercent").notNull(), // Applied markup % for this line
-  sellPrice: decimal("sellPrice", { precision: 12, scale: 4 }).notNull(), // Calculated sell price (cost * (1 + markup/100))
+  discountPercent: int("discountPercent").default(0).notNull(), // Discount % applied to cost before margin (e.g., cable supplier discounts)
+  sellPrice: decimal("sellPrice", { precision: 12, scale: 4 }).notNull(), // Calculated sell price after discount and margin
   lineOrder: int("lineOrder").notNull(), // Sort order in quote
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

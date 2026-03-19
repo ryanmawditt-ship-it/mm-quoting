@@ -466,13 +466,15 @@ export async function updateCustomerQuoteStatus(id: number, status: 'draft' | 's
 /**
  * Customer Quote Line Items
  */
-export async function createCustomerQuoteLineItem(customerQuoteId: number, lineItemId: number, quantity: number, description: string, costPrice: string | number, marginPercent: number, lineOrder: number, itemType?: string) {
+export async function createCustomerQuoteLineItem(customerQuoteId: number, lineItemId: number, quantity: number, description: string, costPrice: string | number, marginPercent: number, lineOrder: number, itemType?: string, discountPercent?: number) {
   const db = await getDb();
   if (!db) return;
   const costNum = typeof costPrice === 'string' ? parseFloat(costPrice) : costPrice;
-  // Margin formula: Sell Price = Cost / (1 - margin/100)
-  const sellPrice = marginPercent >= 100 ? costNum : costNum / (1 - marginPercent / 100);
-  await db.insert(customerQuoteLineItems).values({ customerQuoteId, lineItemId, quantity, description, costPrice: String(costPrice), markupPercent: marginPercent, sellPrice: String(sellPrice), lineOrder, itemType: itemType || null });
+  const disc = discountPercent || 0;
+  // Apply discount first, then margin: Discounted Cost = Cost * (1 - disc/100), Sell = Discounted / (1 - margin/100)
+  const discountedCost = costNum * (1 - disc / 100);
+  const sellPrice = marginPercent >= 100 ? discountedCost : discountedCost / (1 - marginPercent / 100);
+  await db.insert(customerQuoteLineItems).values({ customerQuoteId, lineItemId, quantity, description, costPrice: String(costPrice), markupPercent: marginPercent, sellPrice: String(sellPrice), lineOrder, itemType: itemType || null, discountPercent: disc });
 }
 
 export async function getCustomerQuoteLineItems(customerQuoteId: number) {

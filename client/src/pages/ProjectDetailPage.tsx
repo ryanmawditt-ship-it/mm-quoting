@@ -1840,7 +1840,7 @@ function ReorderList({
   onReorder,
 }: {
   orderedItemIds: number[];
-  selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>;
+  selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string; discount: number }>;
   allLineItems: Array<{ item: any; supplier: any; supplierQuote: any }>;
   onReorder: (newOrder: number[]) => void;
 }) {
@@ -1866,7 +1866,8 @@ function ReorderList({
             const data = selectedItems.get(itemId);
             if (!data) return null;
             const lineItem = allLineItems.find(({ item }) => item.id === itemId);
-            const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
+            const discountedCost = data.costPrice * (1 - (data.discount || 0) / 100);
+            const sellPrice = data.margin >= 100 ? discountedCost : discountedCost / (1 - data.margin / 100);
             const sellTotal = `$${(sellPrice * data.quantity).toFixed(2)}`;
             return (
               <SortableRow
@@ -1894,18 +1895,20 @@ function QuoteBuilderTable({
   updateItemMargin,
   updateItemQuantity,
   updateItemType,
+  updateItemDiscount,
   saveMarginToDb,
   setSelectedItems,
   globalMargin,
 }: {
   allLineItems: Array<{ item: any; supplier: any; supplierQuote: any }>;
-  selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>;
+  selectedItems: Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string; discount: number }>;
   toggleItem: (itemId: number, item: any, supplier: any) => void;
   updateItemMargin: (itemId: number, margin: number) => void;
   updateItemQuantity: (itemId: number, quantity: number) => void;
   updateItemType: (itemId: number, itemType: string) => void;
+  updateItemDiscount: (itemId: number, discount: number) => void;
   saveMarginToDb: (itemId: number, margin: number) => void;
-  setSelectedItems: React.Dispatch<React.SetStateAction<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>>;
+  setSelectedItems: React.Dispatch<React.SetStateAction<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string; discount: number }>>>;
   globalMargin: number;
 }) {
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
@@ -1990,6 +1993,7 @@ function QuoteBuilderTable({
             description: item.description || "",
             costPrice: parseFloat(item.costPrice),
             itemType: item.type || "",
+            discount: 0,
           });
         }
       });
@@ -2002,8 +2006,10 @@ function QuoteBuilderTable({
     const isSelected = selectedItems.has(item.id);
     const data = selectedItems.get(item.id);
     const cost = parseFloat(item.costPrice);
+    const discount = data?.discount ?? 0;
+    const discountedCost = cost * (1 - discount / 100);
     const margin = data?.margin ?? (supplier?.defaultMarkupPercent || 20);
-    const sellPrice = margin >= 100 ? cost : cost / (1 - margin / 100);
+    const sellPrice = margin >= 100 ? discountedCost : discountedCost / (1 - margin / 100);
     const qty = data?.quantity ?? item.quantity;
 
     return (
@@ -2055,6 +2061,20 @@ function QuoteBuilderTable({
           ${cost.toFixed(2)}
         </td>
         <td className="p-3 text-right">
+          {isSelected ? (
+            <Input
+              type="number"
+              className="w-16 h-7 text-right text-xs"
+              value={data?.discount ?? 0}
+              onChange={(e) => updateItemDiscount(item.id, parseInt(e.target.value) || 0)}
+              min={0}
+              max={100}
+            />
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </td>
+        <td className="p-3 text-right">
           <Input
             type="number"
             className="w-20 h-7 text-right text-xs"
@@ -2072,6 +2092,7 @@ function QuoteBuilderTable({
                   description: item.description || "",
                   costPrice: parseFloat(item.costPrice),
                   itemType: item.type || "",
+                  discount: 0,
                 });
                 setSelectedItems(newSelected);
                 saveMarginToDb(item.id, clampedMargin);
@@ -2105,6 +2126,7 @@ function QuoteBuilderTable({
               <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
               <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
               <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+              <th className="p-3 text-right font-medium text-muted-foreground w-20">Disc %</th>
               <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
               <th className="p-3 text-right font-medium text-muted-foreground">Sell Price</th>
               <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
@@ -2131,6 +2153,7 @@ function QuoteBuilderTable({
             <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
             <th className="p-3 text-right font-medium text-muted-foreground">Qty</th>
             <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+            <th className="p-3 text-right font-medium text-muted-foreground w-20">Disc %</th>
             <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
             <th className="p-3 text-right font-medium text-muted-foreground">Sell Price</th>
             <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
@@ -2151,8 +2174,10 @@ function QuoteBuilderTable({
             group.items.forEach(({ item, supplier: sup }) => {
               const data = selectedItems.get(item.id);
               const cost = parseFloat(item.costPrice) || 0;
+              const discount = data?.discount ?? 0;
+              const discountedCost = cost * (1 - discount / 100);
               const margin = data?.margin ?? (sup?.defaultMarkupPercent || 20);
-              const sell = margin >= 100 ? cost : cost / (1 - margin / 100);
+              const sell = margin >= 100 ? discountedCost : discountedCost / (1 - margin / 100);
               groupSellTotal += sell * (item.quantity || 0);
             });
 
@@ -2219,8 +2244,10 @@ function QuoteBuilderTable({
                     const isSelected = selectedItems.has(item.id);
                     const data = selectedItems.get(item.id);
                     const cost = parseFloat(item.costPrice);
+                    const discount = data?.discount ?? 0;
+                    const discountedCost = cost * (1 - discount / 100);
                     const margin = data?.margin ?? (sup?.defaultMarkupPercent || 20);
-                    const sellPrice = margin >= 100 ? cost : cost / (1 - margin / 100);
+                    const sellPrice = margin >= 100 ? discountedCost : discountedCost / (1 - margin / 100);
                     const qty = data?.quantity ?? item.quantity;
 
                     return (
@@ -2255,6 +2282,20 @@ function QuoteBuilderTable({
                           ${cost.toFixed(2)}
                         </td>
                         <td className="p-3 text-right">
+                          {isSelected ? (
+                            <Input
+                              type="number"
+                              className="w-16 h-7 text-right text-xs"
+                              value={data?.discount ?? 0}
+                              onChange={(e) => updateItemDiscount(item.id, parseInt(e.target.value) || 0)}
+                              min={0}
+                              max={100}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
                           <Input
                             type="number"
                             className="w-20 h-7 text-right text-xs"
@@ -2272,6 +2313,7 @@ function QuoteBuilderTable({
                                   description: item.description || "",
                                   costPrice: parseFloat(item.costPrice),
                                   itemType: item.type || "",
+                                  discount: 0,
                                 });
                                 setSelectedItems(newSelected);
                                 saveMarginToDb(item.id, clampedMargin);
@@ -2317,7 +2359,7 @@ function QuoteBuilder({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>>(new Map());
+  const [selectedItems, setSelectedItems] = useState<Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string; discount: number }>>(new Map());
   const [orderedItemIds, setOrderedItemIds] = useState<number[]>([]);
   const [globalMargin, setGlobalMargin] = useState<number>(20);
   const [salespersonId, setSalespersonId] = useState<string>("");
@@ -2417,6 +2459,7 @@ function QuoteBuilder({
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
         itemType: item.type || "",
+        discount: 0,
       });
       setOrderedItemIds(prev => [...prev, itemId]);
     }
@@ -2424,7 +2467,7 @@ function QuoteBuilder({
   };
 
   const selectAll = () => {
-    const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string }>();
+    const newSelected = new Map<number, { margin: number; quantity: number; description: string; costPrice: number; itemType: string; discount: number }>();
     const newOrder: number[] = [];
     allLineItems.forEach(({ item, supplier }) => {
       const savedMargin = getItemMargin(item, supplier);
@@ -2434,6 +2477,7 @@ function QuoteBuilder({
         description: item.description || "",
         costPrice: parseFloat(item.costPrice),
         itemType: item.type || "",
+        discount: 0,
       });
       if (!orderedItemIds.includes(item.id)) {
         newOrder.push(item.id);
@@ -2483,6 +2527,17 @@ function QuoteBuilder({
     saveTimerRef.current = setTimeout(() => {
       saveMarginToDb(itemId, clampedMargin);
     }, 300);
+  };
+
+  // Update discount for a single item
+  const updateItemDiscount = (itemId: number, discount: number) => {
+    const clampedDiscount = Math.min(100, Math.max(0, discount));
+    const newSelected = new Map(selectedItems);
+    const existing = newSelected.get(itemId);
+    if (existing) {
+      newSelected.set(itemId, { ...existing, discount: clampedDiscount });
+    }
+    setSelectedItems(newSelected);
   };
 
   // Apply global margin to ALL selected items immediately and save to DB
@@ -2698,7 +2753,8 @@ function QuoteBuilder({
   const totals = useMemo(() => {
     let totalExclGst = 0;
     selectedItems.forEach((val) => {
-      const sellPrice = val.margin >= 100 ? val.costPrice : val.costPrice / (1 - val.margin / 100);
+      const discountedCost = val.costPrice * (1 - (val.discount || 0) / 100);
+      const sellPrice = val.margin >= 100 ? discountedCost : discountedCost / (1 - val.margin / 100);
       totalExclGst += sellPrice * val.quantity;
     });
     const gst = totalExclGst * 0.1;
@@ -2742,6 +2798,7 @@ function QuoteBuilder({
           description: data.description,
           costPrice: data.costPrice,
           marginPercent: data.margin,
+          discountPercent: data.discount || 0,
           lineOrder: idx + 1,
           itemType: data.itemType || "",
         };
@@ -3034,6 +3091,7 @@ function QuoteBuilder({
               updateItemMargin={updateItemMargin}
               updateItemQuantity={updateItemQuantity}
               updateItemType={updateItemType}
+              updateItemDiscount={updateItemDiscount}
               saveMarginToDb={saveMarginToDb}
               setSelectedItems={setSelectedItems}
               globalMargin={globalMargin}
@@ -3225,6 +3283,7 @@ function QuoteBuilder({
                         <th className="p-3 text-left font-medium text-muted-foreground">Description</th>
                         <th className="p-3 text-right font-medium text-muted-foreground w-24">Qty</th>
                         <th className="p-3 text-right font-medium text-muted-foreground">Cost</th>
+                        <th className="p-3 text-right font-medium text-muted-foreground w-20">Disc %</th>
                         <th className="p-3 text-right font-medium text-muted-foreground w-24">Margin %</th>
                         <th className="p-3 text-right font-medium text-muted-foreground">Sell</th>
                         <th className="p-3 text-right font-medium text-muted-foreground">Line Total</th>
@@ -3237,7 +3296,8 @@ function QuoteBuilder({
                         return group.items.map((item, itemIdxInGroup) => {
                           const { id: itemId, data, lineItem } = item;
                           const globalIdx = group.startIdx + itemIdxInGroup;
-                          const sellPrice = data.margin >= 100 ? data.costPrice : data.costPrice / (1 - data.margin / 100);
+                          const discountedCost = data.costPrice * (1 - (data.discount || 0) / 100);
+                          const sellPrice = data.margin >= 100 ? discountedCost : discountedCost / (1 - data.margin / 100);
                           const isFirstInGroup = itemIdxInGroup === 0;
                           const isLastInGroup = itemIdxInGroup === group.items.length - 1;
 
@@ -3334,6 +3394,16 @@ function QuoteBuilder({
                               </td>
                               <td className="p-2 text-right font-mono text-xs text-muted-foreground">
                                 ${data.costPrice.toFixed(2)}
+                              </td>
+                              <td className="p-2 text-right">
+                                <Input
+                                  type="number"
+                                  className="w-16 h-7 text-right text-xs"
+                                  value={data.discount || 0}
+                                  onChange={(e) => updateItemDiscount(itemId, parseInt(e.target.value) || 0)}
+                                  min={0}
+                                  max={100}
+                                />
                               </td>
                               <td className="p-2 text-right">
                                 <Input

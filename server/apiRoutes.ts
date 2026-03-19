@@ -525,8 +525,10 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
     for (const item of items) {
       const costPrice = typeof item.costPrice === "string" ? parseFloat(item.costPrice) : item.costPrice;
       const marginPercent = item.marginPercent || globalMarginPercent || 0;
-      // Margin formula: Sell Price = Cost / (1 - margin/100)
-      const sellPrice = marginPercent >= 100 ? costPrice : costPrice / (1 - marginPercent / 100);
+      const discountPercent = item.discountPercent || 0;
+      // Apply discount first, then margin: Discounted Cost = Cost * (1 - disc/100), Sell = Discounted / (1 - margin/100)
+      const discountedCost = costPrice * (1 - discountPercent / 100);
+      const sellPrice = marginPercent >= 100 ? discountedCost : discountedCost / (1 - marginPercent / 100);
 
       // Get the original line item for product code and lead time
       const origItem = await getLineItemById(item.lineItemId);
@@ -541,7 +543,8 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         String(costPrice),
         marginPercent,
         item.lineOrder,
-        itemType
+        itemType,
+        discountPercent
       );
 
       quoteLineItems.push({
@@ -550,7 +553,7 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         productCode: origItem?.productCode || "",
         description: item.description || origItem?.description || "",
         quantity: item.quantity,
-        costPrice,
+        costPrice: discountedCost,
         marginPercent,
         sellPrice,
         leadTimeDays: origItem?.leadTimeDays || null,

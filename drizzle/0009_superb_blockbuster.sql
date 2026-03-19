@@ -1,0 +1,1 @@
+ALTER TABLE `customer_quote_line_items` ADD `discountPercent` int DEFAULT 0 NOT NULL;

@@ -292,3 +292,7 @@
 - [x] Fix Smartscape lump sum pricing: priced item now has qty=1 so group total is not multiplied
 - [x] Updated extraction prompt: first item always gets qty=1 with SUBTOTAL as lump sum price
 - [x] Fixed existing data: LED Downlight qty 13→1, Arcled Strip TW qty 10→1
+- [x] Add discount % field to quote builder for cable suppliers (Prysmian, Electra)
+- [x] Discount should reduce the supplier cost price before margin is applied (price - discount%)
+- [x] Store discount per line item in customer quote
+- [x] Update PDF generation to reflect discounted cost in pricing calculations

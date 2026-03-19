@@ -363,6 +363,7 @@ export const appRouter = router({
           description: z.string(),
           costPrice: z.union([z.string(), z.number()]),
           markupPercent: z.number(),
+          discountPercent: z.number().optional(),
           lineOrder: z.number(),
         })
       )
@@ -375,7 +376,8 @@ export const appRouter = router({
           input.costPrice,
           input.markupPercent,
           input.lineOrder,
-          input.itemType
+          input.itemType,
+          input.discountPercent
         )
       ),
     getByCustomerQuote: protectedProcedure

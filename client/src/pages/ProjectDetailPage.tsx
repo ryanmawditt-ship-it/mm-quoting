@@ -2435,9 +2435,9 @@ function QuoteBuilder({
         const sq = supplierQuotes[idx];
         const supplier = suppliers.find((s) => s.id === sq.supplierId);
         query.data.forEach((rawItem) => {
-          // Normalize cable pricing to per 100m
+          // Normalize cable pricing to per 100m (only for cable suppliers like Prysmian, Electra)
           const uom = rawItem.unitOfMeasure || "EA";
-          const conversion = normalizeToPer100m(parseFloat(rawItem.costPrice), uom);
+          const conversion = normalizeToPer100m(parseFloat(rawItem.costPrice), uom, supplier?.name);
           const item = {
             ...rawItem,
             // Override costPrice with normalized per-100m price for cable items

@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, type, productCode, description, quantity, costPrice, isBundled, leadTimeDays FROM line_items WHERE supplierQuoteId = 690002 AND id >= 690018 ORDER BY itemNumber;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT id, type, productCode, description, quantity, costPrice, isBundled, leadTimeDays FROM line_items WHERE supplierQuoteId = 690002 AND id >= 690018 ORDER BY itemNumber;",
+  "rows": [
+    {
+      "id": "690018",
+      "type": "NULL",
+      "productCode": "AT28001253",
+      "description": "Constant Voltage 100W 24V DALI Dimmable (ONE4ALL) Driver, 5 year warranty",
+      "quantity": "7",
+      "costPrice": "98.0200",
+      "isBundled": "0",
+      "leadTimeDays": "98"
+    },
+    {
+      "id": "690019",
+      "type": "NULL",
+      "productCode": "L8 PROJ",
+      "description": "Lumen8 on site installation direction; 1 representative, 1 day",
+      "quantity": "1",
+      "costPrice": "960.0000",
+      "isBundled": "0",
+      "leadTimeDays": "98"
+    },
+    {
+      "id": "690020",
+      "type": "NULL",
+      "productCode": "L8 PROJ",
+      "description": "Plant installation - Post hanging pot pendants",
+      "quantity": "1",
+      "costPrice": "960.0000",
+      "isBundled": "0",
+      "leadTimeDays": "98"
+    },
+    {
+      "id": "690021",
+      "type": "NULL",
+      "productCode": "L8 PROJ",
+      "description": "220 plants total, refer plant schedule.",
+      "quantity": "1",
+      "costPrice": "0.0000",
+      "isBundled": "1",
+      "leadTimeDays": "98"
+    },
+    {
+      "id": "690022",
+      "type": "FREIGHT",
+      "productCode": "FREIGHT Processing & Handling",
+      "description": "This amount shown is based on the quoted items and delivery location. Alterations to product, quantities or delivery location may result in freight charge variations.",
+      "quantity": "1",
+      "costPrice": "750.0000",
+      "isBundled": "0",
+      "leadTimeDays": "98"
+    },
+    {
+      "id": "690023",
+      "type": "NULL",
+      "productCode": "LEAD TIME",
+      "description": "Approximately 12-14 weeks from order, subject to change.",
+      "quantity": "1",
+      "costPrice": "0.0000",
+      "isBundled": "1",
+      "leadTimeDays": "98"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttype\tproductCode\tdescription\tquantity\tcostPrice\tisBundled\tleadTimeDays\n690018\tNULL\tAT28001253\tConstant Voltage 100W 24V DALI Dimmable (ONE4ALL) Driver, 5 year warranty\t7\t98.0200\t0\t98\n690019\tNULL\tL8 PROJ\tLumen8 on site installation direction; 1 representative, 1 day\t1\t960.0000\t0\t98\n690020\tNULL\tL8 PROJ\tPlant installation - Post hanging pot pendants\t1\t960.0000\t0\t98\n690021\tNULL\tL8 PROJ\t220 plants total, refer plant schedule.\t1\t0.0000\t1\t98\n690022\tFREIGHT\tFREIGHT Processing & Handling\tThis amount shown is based on the quoted items and delivery location. Alterations to product, quantities or delivery location may result in freight charge variations.\t1\t750.0000\t0\t98\n690023\tNULL\tLEAD TIME\tApproximately 12-14 weeks from order, subject to change.\t1\t0.0000\t1\t98\n",
+  "stderr": "",
+  "execution_time_ms": 1552
+}

@@ -302,3 +302,7 @@
 - [x] Convert 500M cost to per-100m (divide by 5), M cost to per-100m (multiply by 100)
 - [x] Display converted unit pricing in quote builder with amber conversion indicators
 - [x] Ensure PDF generation uses correct per-100m unit of measure
+- [ ] BUG: Lumen8 price misalignment — AT87500921 getting $126 which belongs to L8BUACBLRD on the line below
+- [ ] BUG: Lumen8 TYPEL3.3 lines not being extracted (left blank)
+- [ ] BUG: Lead time information should be extracted into notes/comments, not as a separate line item
+- [x] BUG: Boardwalk Tavern — Lightcore costing calculation error when building customer quote (cable unit conversion was applying to non-cable suppliers like Lightcore; now restricted to Prysmian/Electra only)

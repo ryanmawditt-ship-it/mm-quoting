@@ -14,6 +14,7 @@ import {
   getLineItemById,
   getLineItemsBySupplierQuote,
   getSupplierById,
+  getSupplierQuoteById,
   getOrCreateSupplierByName,
   createCustomerQuote,
   createCustomerQuoteLineItem,
@@ -142,17 +143,43 @@ You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text t
 **LUMEN8 ARCHITECTURAL LIGHTING (PROGETTO ONE PTY LTD):**
 - Columns: QTY | ITEM CODE | DESCRIPTION | PRICE ex GST | TOTAL ex GST
 - Items grouped under TYPE CODE headers (e.g., "TYPE CODE    WL01    Low Level Ceiling area", "TYPE CODE    SL04    Substation External")
-- The TYPE CODE header text (e.g., "WL01", "WL05", "SL04", "PD01", "L4") should be used as the "type" field for items under it
-- CRITICAL PRICE ALIGNMENT RULE: Each row's price belongs ONLY to that row. If a row has BLANK/EMPTY price columns (no PRICE ex GST and no TOTAL ex GST values), that item is bundled — set unitPrice=0 and isBundled=true. NEVER shift or reassign a price from one row to another.
+- The TYPE CODE header text (e.g., "WL01", "WL05", "SL04", "PD01", "L4", "L3.1", "L3.2", "L3.3") should be used as the "type" field for ALL items under it
+
+**LUMEN8 TYPE ASSIGNMENT (CRITICAL):**
+- Once a TYPE CODE header is encountered (e.g., "TYPE CODE L3.3"), ALL subsequent items belong to that type until the NEXT TYPE CODE header appears
+- This includes drivers (AT-series), accessories (L8BUACBLRD, L8 POWDERCOAT), LED modules, canopies, and ANY other component listed under that section
+- Items that appear after the LAST type section (e.g., installation, on-site direction, plant items) should STILL be assigned to the last active TYPE CODE, unless they are clearly FREIGHT or lead time notes
+- NEVER leave the type field blank/null for items that appear within or after a TYPE CODE section
+
+**LUMEN8 PRICE ALIGNMENT (CRITICAL — READ CAREFULLY):**
+- Each row in the PDF has its OWN price columns (PRICE ex GST and TOTAL ex GST)
+- You MUST read each row's price columns INDEPENDENTLY — do NOT look at adjacent rows
+- If a row has BLANK/EMPTY price columns, that item is bundled: set unitPrice=0 and isBundled=true
+- If a row has price values, those prices belong to THAT row ONLY
+- NEVER shift, reassign, or move a price from one row to another row
+- COMMON MISTAKE TO AVOID: The driver item (e.g., AT87500921) and the accessory below it (e.g., L8BUACBLRD "Black Rod Accessory") are SEPARATE rows. If the driver row has blank price columns, it is bundled ($0). If the rod accessory row has a price like $126.00, that price belongs to the ROD ACCESSORY, not the driver. Read each row left-to-right independently.
+- Another example: If you see:
+    Row A: AT87500921 | "Constant Current 20W Driver..." | (blank price) | (blank total)
+    Row B: L8BUACBLRD | "Black Rod Accessory..." | $126.00 | $3,402.00
+  Then: Row A → unitPrice=0, isBundled=true. Row B → unitPrice=126.00, isBundled=false.
+  Do NOT assign $126.00 to Row A.
+
+**LUMEN8 LEAD TIME — NOT A LINE ITEM:**
+- Lumen8 quotes often have a "LEAD TIME" row at the end (e.g., "Approximately 12-14 weeks from order, subject to change")
+- This is NOT a product line item — do NOT extract it as a line item
+- Instead, extract the lead time text into the "deliveryNotes" field
+- Use the lead time to set generalLeadTimeDays (e.g., 12-14 weeks = 98 days using the higher number)
+
 - Common item patterns within a type section:
-  * Main fixture (e.g., L8 BESPOKE-WAVERWLB, L8 BESPOKE-HARBOUR) — always has a price
-  * LED modules (e.g., SOMODL099027PRO60L "Solis Low Profile LED module") — may or may NOT have a price. Check the PRICE ex GST column on THAT specific row. If blank, it is bundled (unitPrice=0, isBundled=true)
-  * Bronze pipes (e.g., L8 BESPOKE "Bronze pipe with ceiling canopy...") — often HAS a price (commonly $135.00). The price is on the BRONZE PIPE row, NOT on adjacent rows
-  * Drivers (e.g., AT87500921 "Constant Current 20W...") — may or may NOT have a price (commonly $32.00 when priced). Check the PRICE ex GST column on THAT specific row
-  * Shades (e.g., "Anodic Bronze Matte Shade for Mimante L") — may or may NOT have a price. If blank, it is bundled
-- CRITICAL: Do NOT confuse which row has the price. Look at the PRICE ex GST and TOTAL ex GST columns for EACH individual row independently. A row with values like "$135.00" and "$810.00" in the price columns is a PRICED item. A row with BLANK price columns is BUNDLED.
-- Lead time: typically 12-16 weeks from order (84-112 days). Use 112 days.
-- Freight is a separate line item at the end
+  * Main fixture (e.g., L8 BESPOKE-WAVERWLB, L8 PROJ, 32 LPSFI032) — always has a price
+  * LED modules (e.g., SOMODL099027PRO60L "Solis Low Profile LED module") — often bundled (unitPrice=0, isBundled=true)
+  * Rod accessories (e.g., L8BUACBLRD "Black Rod Accessory") — check price column on THAT row; may have a price like $126.00
+  * Drivers (e.g., AT87500921 "Constant Current 20W...", AT28001253) — check price column on THAT row; may be bundled or priced
+  * Powdercoat (e.g., L8 POWDERCOAT) — often bundled
+  * Canopies/ceiling mounts (e.g., SOCCACWH70) — often has a price
+  * Shades (e.g., "Anodic Bronze Matte Shade") — may or may NOT have a price
+  * Installation items (e.g., L8 MOD "HW - remove e27...", "on site installation direction") — usually has a price
+- Freight is a separate line item at the end with type="FREIGHT"
 - Validity: check quote terms
 
 **SMARTSCAPE CONNECTED LIGHTING SYSTEMS:**
@@ -185,6 +212,7 @@ You MUST capture ALL of this text. Use the "typeNotes" field to store ALL text t
 **GENERAL RULES FOR ALL SUPPLIERS:**
 1. Extract EVERY product line item — do not skip any
 2. Do NOT extract terms & conditions as line items
+2a. Do NOT extract "LEAD TIME" rows as line items. Lines like "Approximately 12-14 weeks from order" or "LEAD TIME: 8-10 weeks" are delivery/scheduling information — extract them into the deliveryNotes field and use them to set generalLeadTimeDays. This applies to ALL suppliers, not just Lumen8.
 3. For descriptions: include the FULL and COMPLETE text exactly as written. Include ALL technical specs, model details, colour temps, wattages, dimensions, finishes. Do NOT truncate or summarise.
 4. For numbers: handle comma-separated (2,950.00), space-separated (5 393.29), and plain formats. Strip currency symbols ($, AUD). Always return clean decimal numbers.
 5. If an item has a "Total" or "Extended Price" but no unit price, calculate: unitPrice = total / quantity. If quantity is 0, use the total as unitPrice.
@@ -333,7 +361,37 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
       quoteExpiry.setDate(quoteExpiry.getDate() + validityDays);
     }
 
-    // 7. Create supplier quote record with enriched data
+    // 7. Post-process: filter out lead time rows that the LLM may have extracted as line items
+    // These should be in deliveryNotes, not as line items — must run BEFORE creating supplier quote
+    const filteredLineItems: any[] = [];
+    const leadTimeNotes: string[] = [];
+    for (const item of extracted.lineItems) {
+      const code = (item.productCode || "").toUpperCase().trim();
+      const desc = (item.description || "").toUpperCase().trim();
+      const isLeadTimeLine = 
+        code === "LEAD TIME" ||
+        code === "LEADTIME" ||
+        code.startsWith("LEAD TIME") ||
+        (desc.includes("LEAD TIME") && item.unitPrice === 0) ||
+        (desc.match(/^APPROXIMATELY \d+-\d+ WEEKS/) && item.unitPrice === 0) ||
+        (desc.match(/^\d+-\d+ WEEKS FROM ORDER/) && item.unitPrice === 0);
+      if (isLeadTimeLine) {
+        leadTimeNotes.push(item.description || code);
+        console.log(`[Extraction] Filtered out lead time line item: ${code} - ${item.description}`);
+      } else {
+        filteredLineItems.push(item);
+      }
+    }
+    // Append any filtered lead time notes to delivery notes
+    if (leadTimeNotes.length > 0) {
+      const existingNotes = extracted.deliveryNotes || "";
+      const leadTimeText = leadTimeNotes.join("; ");
+      extracted.deliveryNotes = existingNotes
+        ? `${existingNotes}\nLead Time: ${leadTimeText}`
+        : `Lead Time: ${leadTimeText}`;
+    }
+
+    // 7b. Create supplier quote record with enriched data (after lead time filter so deliveryNotes is complete)
     await createSupplierQuote(
       parseInt(projectId),
       supplierId,
@@ -362,7 +420,7 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
     const typeNotesAttached = new Set<string>();
     const savedItems: any[] = [];
     let itemIdx = 0;
-    for (const item of extracted.lineItems) {
+    for (const item of filteredLineItems) {
       itemIdx++;
       // Use item-specific lead time, or fall back to general lead time
       const itemLeadTime = item.leadTimeDays ?? generalLT;
@@ -548,9 +606,18 @@ apiRouter.post("/api/generate-customer-quote", async (req: Request, res: Respons
         discountPercent
       );
 
-      // Normalize unit of measure to per 100m for the PDF display
+      // Normalize unit of measure to per 100m for the PDF display (only for cable suppliers)
       const origUom = origItem?.unitOfMeasure || "EA";
-      const conversion = normalizeToPer100m(1, origUom); // just to get the display unit
+      // Look up the supplier name from the line item's supplier quote
+      let supplierNameForConversion: string | null = null;
+      if (origItem?.supplierQuoteId) {
+        const sq = await getSupplierQuoteById(origItem.supplierQuoteId);
+        if (sq) {
+          const sup = await getSupplierById(sq.supplierId);
+          supplierNameForConversion = sup?.name || null;
+        }
+      }
+      const conversion = normalizeToPer100m(1, origUom, supplierNameForConversion);
       const displayUom = conversion.displayUnit;
 
       quoteLineItems.push({
@@ -1075,6 +1142,31 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
       console.warn("[EmailExtract] Could not auto-track supplier:", e);
     }
 
+    // Filter out lead time rows BEFORE creating supplier quote (so deliveryNotes is complete)
+    const filteredLineItems: any[] = [];
+    const leadTimeNotes: string[] = [];
+    for (const item of extracted.lineItems) {
+      const code = (item.productCode || "").toUpperCase().trim();
+      const desc = (item.description || "").toUpperCase().trim();
+      const isLeadTimeLine = 
+        code === "LEAD TIME" || code === "LEADTIME" || code.startsWith("LEAD TIME") ||
+        (desc.includes("LEAD TIME") && item.unitPrice === 0) ||
+        (desc.match(/^APPROXIMATELY \d+-\d+ WEEKS/) && item.unitPrice === 0) ||
+        (desc.match(/^\d+-\d+ WEEKS FROM ORDER/) && item.unitPrice === 0);
+      if (isLeadTimeLine) {
+        leadTimeNotes.push(item.description || code);
+      } else {
+        filteredLineItems.push(item);
+      }
+    }
+    if (leadTimeNotes.length > 0) {
+      const existingNotes = extracted.deliveryNotes || "";
+      const leadTimeText = leadTimeNotes.join("; ");
+      extracted.deliveryNotes = existingNotes
+        ? `${existingNotes}\nLead Time: ${leadTimeText}`
+        : `Lead Time: ${leadTimeText}`;
+    }
+
     // Create supplier quote record (no PDF URL for email quotes)
     await createSupplierQuote(
       parseInt(projectId),
@@ -1099,7 +1191,7 @@ Return ONLY valid JSON matching the schema. Do not include markdown formatting o
     // Save extracted line items
     const savedItems: any[] = [];
     let itemIdx = 0;
-    for (const item of extracted.lineItems) {
+    for (const item of filteredLineItems) {
       itemIdx++;
       const unitPrice = sanitiseNumber(item.unitPrice);
       const totalPrice = item.totalPrice != null ? sanitiseNumber(item.totalPrice) : null;

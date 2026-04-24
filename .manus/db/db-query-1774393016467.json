@@ -1,0 +1,58 @@
+{
+  "query": "SELECT p.name, sq.id as sq_id, sq.quoteNumber, s.name as supplier_name FROM projects p JOIN supplier_quotes sq ON sq.projectId = p.id JOIN suppliers s ON s.id = sq.supplierId WHERE p.name LIKE '%Tingalpa%' OR p.name LIKE '%tingalpa%' OR p.name LIKE '%Hotel%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3ro2tCDef8YTuRV.root --database 89sPt5WznQmH7pHfxEjFRd --execute SELECT p.name, sq.id as sq_id, sq.quoteNumber, s.name as supplier_name FROM projects p JOIN supplier_quotes sq ON sq.projectId = p.id JOIN suppliers s ON s.id = sq.supplierId WHERE p.name LIKE '%Tingalpa%' OR p.name LIKE '%tingalpa%' OR p.name LIKE '%Hotel%';",
+  "rows": [
+    {
+      "name": "Tingalpa Hotel",
+      "sq_id": "690003",
+      "quoteNumber": "6364-21467",
+      "supplier_name": "LUXSON ILLUMINATION"
+    },
+    {
+      "name": "Tingalpa Hotel",
+      "sq_id": "690004",
+      "quoteNumber": "Q 63771",
+      "supplier_name": "Raylinc Agencies Pty Ltd"
+    },
+    {
+      "name": "Breakfast Creek Hotel",
+      "sq_id": "480001",
+      "quoteNumber": "585978",
+      "supplier_name": "Gamma Illumination Pty Ltd"
+    },
+    {
+      "name": "Tingalpa Hotel",
+      "sq_id": "690002",
+      "quoteNumber": "00034101",
+      "supplier_name": "Progetto One Pty Ltd trading as Lumen8 Architectural Lighting"
+    },
+    {
+      "name": "Breakfast Creek Hotel",
+      "sq_id": "480002",
+      "quoteNumber": "00033629",
+      "supplier_name": "Progetto One Pty Ltd trading as Lumen8 Architectural Lighting"
+    },
+    {
+      "name": "Breakfast Creek Hotel",
+      "sq_id": "570002",
+      "quoteNumber": "NULL",
+      "supplier_name": "Unknown Supplier"
+    },
+    {
+      "name": "Breakfast Creek Hotel",
+      "sq_id": "570001",
+      "quoteNumber": "NULL",
+      "supplier_name": "Unknown Supplier"
+    },
+    {
+      "name": "Tingalpa Hotel",
+      "sq_id": "690001",
+      "quoteNumber": "Q-38886 TB",
+      "supplier_name": "EST LIGHTING™"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tsq_id\tquoteNumber\tsupplier_name\nTingalpa Hotel\t690003\t6364-21467\tLUXSON ILLUMINATION\nTingalpa Hotel\t690004\tQ 63771\tRaylinc Agencies Pty Ltd\nBreakfast Creek Hotel\t480001\t585978\tGamma Illumination Pty Ltd\nTingalpa Hotel\t690002\t00034101\tProgetto One Pty Ltd trading as Lumen8 Architectural Lighting\nBreakfast Creek Hotel\t480002\t00033629\tProgetto One Pty Ltd trading as Lumen8 Architectural Lighting\nBreakfast Creek Hotel\t570002\tNULL\tUnknown Supplier\nBreakfast Creek Hotel\t570001\tNULL\tUnknown Supplier\nTingalpa Hotel\t690001\tQ-38886 TB\tEST LIGHTING™\n",
+  "stderr": "",
+  "execution_time_ms": 1582
+}

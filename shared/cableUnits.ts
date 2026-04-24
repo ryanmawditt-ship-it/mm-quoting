@@ -1,8 +1,12 @@
 /**
  * Cable Unit Normalization
  *
- * Cable suppliers quote in various units (KM, 500M, 100M, M, EA).
+ * Cable suppliers (Prysmian, Electra) quote in various units (KM, 500M, 100M, M, EA).
  * We normalize all cable pricing to per 100m for consistent quoting.
+ *
+ * IMPORTANT: This conversion ONLY applies to cable suppliers.
+ * Other suppliers (e.g., Lightcore, Lumen8) may use "metres" for LED strip pricing
+ * which should NOT be converted to per-100m.
  *
  * Conversion factors (multiply costPrice by this to get per-100m price):
  *   KM   → ÷ 10  (factor = 0.1)
@@ -12,7 +16,16 @@
  *   EA   → no conversion (not length-based)
  */
 
-/** Units that represent cable lengths and should be normalized */
+/** Known cable suppliers whose per-metre/per-km pricing should be normalized to per 100m */
+const CABLE_SUPPLIER_NAMES = [
+  "prysmian",
+  "electra",
+  "electra cables",
+  "prysmian group",
+  "prysmian australia",
+];
+
+/** Units that represent cable lengths and should be normalized (only for cable suppliers) */
 const CABLE_LENGTH_UNITS: Record<string, number> = {
   KM: 0.1,           // 1 KM = 10 × 100m → price per 100m = price per KM / 10
   km: 0.1,
@@ -49,6 +62,17 @@ export interface UnitConversionResult {
 }
 
 /**
+ * Check if a supplier is a cable supplier whose pricing should be normalized.
+ */
+export function isCableSupplier(supplierName: string | null | undefined): boolean {
+  if (!supplierName) return false;
+  const lower = supplierName.toLowerCase().trim();
+  return CABLE_SUPPLIER_NAMES.some(
+    (name) => lower.includes(name) || name.includes(lower)
+  );
+}
+
+/**
  * Check if a unit of measure represents a cable length measurement
  */
 export function isCableLengthUnit(unitOfMeasure: string | null | undefined): boolean {
@@ -75,19 +99,28 @@ export function getConversionFactor(unitOfMeasure: string | null | undefined): n
 
 /**
  * Convert a supplier cost price to per-100m pricing.
+ * 
+ * IMPORTANT: Only converts pricing for cable suppliers (Prysmian, Electra).
+ * Non-cable suppliers (Lightcore, Lumen8, etc.) keep their original pricing
+ * even if they use per-metre units (e.g., LED strip sold per metre).
  *
  * @param costPrice - The supplier's quoted price per their unit
  * @param unitOfMeasure - The supplier's unit of measure (KM, 500M, M, 100M, EA, etc.)
+ * @param supplierName - The supplier's name (used to determine if cable conversion applies)
  * @returns Conversion result with normalized price, or original price if no conversion needed
  */
 export function normalizeToPer100m(
   costPrice: number,
-  unitOfMeasure: string | null | undefined
+  unitOfMeasure: string | null | undefined,
+  supplierName?: string | null
 ): UnitConversionResult {
   const unit = unitOfMeasure || "EA";
   const factor = CABLE_LENGTH_UNITS[unit];
 
-  if (factor !== undefined && factor !== 1) {
+  // Only apply conversion if this is a cable supplier
+  const cableSupplier = isCableSupplier(supplierName);
+
+  if (cableSupplier && factor !== undefined && factor !== 1) {
     return {
       costPricePer100m: costPrice * factor,
       originalCostPrice: costPrice,
